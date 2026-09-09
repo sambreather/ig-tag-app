@@ -20,6 +20,37 @@ const state = {
   modalOpen: false,
 };
 
+// --- Apply all static text from content.js, so wording only needs editing there ---
+function applyContent() {
+  document.title = CONTENT.pageTitle;
+  document.querySelector('#screenLogin h1').textContent = CONTENT.login.heading;
+  document.getElementById('loginPassword').placeholder = CONTENT.login.passwordPlaceholder;
+  document.getElementById('loginBtn').textContent = CONTENT.login.loginButton;
+
+  document.getElementById('deletedFilesBtn').innerHTML = `<i class="icon-trash"></i> ${CONTENT.topbar.deletedButton}`;
+  document.getElementById('newAlbumBtn').innerHTML = `<i class="icon-plus"></i> ${CONTENT.topbar.newAlbumButton}`;
+
+  document.getElementById('formName').placeholder = CONTENT.albumForm.namePlaceholder;
+  document.getElementById('formStartLockedNote').textContent = CONTENT.albumForm.startLockedNote;
+  document.getElementById('formEndLockedNote').textContent = CONTENT.albumForm.endLockedNote;
+  document.getElementById('pickerNowLink').textContent = CONTENT.albumForm.startCapturingNowLink;
+
+  document.getElementById('timeSelect').previousElementSibling.textContent = CONTENT.picker.timeLabel;
+  document.getElementById('pickerCancel').textContent = CONTENT.picker.cancelButton;
+  document.getElementById('pickerDone').textContent = CONTENT.picker.doneButton;
+
+  const sortSel = document.getElementById('sortSelect');
+  sortSel.innerHTML = `
+    <option value="newest">${CONTENT.videos.sortNewest}</option>
+    <option value="oldest">${CONTENT.videos.sortOldest}</option>
+    <option value="az">${CONTENT.videos.sortAlphabetical}</option>`;
+
+  document.getElementById('previewHintRow').textContent = CONTENT.preview.hintRow;
+  document.getElementById('previewRestoreBtn').textContent = CONTENT.deletedFiles.restoreButton;
+  document.querySelector('#deletedView .meta-text').textContent = CONTENT.deletedFiles.retentionNote;
+}
+applyContent();
+
 // --- API helper ---
 async function api(path, opts = {}) {
   const res = await fetch(`/api${path}`, {
@@ -49,7 +80,7 @@ async function doLogin() {
     localStorage.setItem('teamPassword', state.password);
     startApp();
   } catch {
-    document.getElementById('loginError').textContent = 'Incorrect password.';
+    document.getElementById('loginError').textContent = CONTENT.login.errorIncorrect;
   }
 }
 
@@ -86,7 +117,7 @@ function renderAlbumList() {
   const list = document.getElementById('albumList');
   list.innerHTML = state.albums.map(a => {
     const isLive = a.status === 'capturing';
-    const statusLabel = a.status === 'capturing' ? 'Capturing' : a.status === 'scheduled' ? 'Scheduled' : 'Done';
+    const statusLabel = a.status === 'capturing' ? CONTENT.albumList.statusCapturing : a.status === 'scheduled' ? CONTENT.albumList.statusScheduled : CONTENT.albumList.statusDone;
     const filesText = a.status === 'scheduled' ? '' :
       `<span class="bold">${(a.videoCount || 0) + (a.photoCount || 0)} files</span> <span class="muted">(${a.videoCount || 0} videos/${a.photoCount || 0} photos)</span>`;
     const dates = a.status === 'capturing' ? `Started ${fmtShort(a.start)}` : `${fmtShort(a.start)} → ${fmtShort(a.end)}`;
@@ -118,7 +149,7 @@ function fmtShort(iso) {
 
 async function deleteAlbum(albumId) {
   await api(`/albums/${albumId}`, { method: 'DELETE' });
-  showToast('Album deleted.', null); // undo would need a restore endpoint - noted for later
+  showToast(CONTENT.videos.albumDeletedToast, null); // undo would need a restore endpoint - noted for later
   showAlbums(state.currentClientId);
 }
 
@@ -129,7 +160,7 @@ document.getElementById('backFromFormBtn').addEventListener('click', () => showA
 function openAlbumForm(albumId) {
   const album = albumId ? state.albums.find(a => a.id === albumId) : null;
   state.formTarget = { clientId: state.currentClientId, albumId };
-  document.getElementById('formTitle').textContent = album ? 'Album settings' : 'New album';
+  document.getElementById('formTitle').textContent = album ? CONTENT.albumForm.titleEdit : CONTENT.albumForm.titleNew;
   document.getElementById('formName').value = album ? album.name : '';
   state.formStartVal = album ? fmtShort(album.start) : '';
   state.formEndVal = album ? fmtShort(album.end) : '';
@@ -139,13 +170,13 @@ function openAlbumForm(albumId) {
 
   const startLocked = album && album.status === 'capturing';
   const endLocked = album && album.status === 'done';
-  document.getElementById('formStartField').textContent = state.formStartVal || 'Select start';
-  document.getElementById('formEndField').textContent = state.formEndVal || 'Select end';
+  document.getElementById('formStartField').textContent = state.formStartVal || CONTENT.albumForm.startPlaceholder;
+  document.getElementById('formEndField').textContent = state.formEndVal || CONTENT.albumForm.endPlaceholder;
   document.getElementById('formStartField').disabled = !!startLocked;
   document.getElementById('formEndField').disabled = !!endLocked;
   document.getElementById('formStartLockedNote').style.display = startLocked ? 'block' : 'none';
   document.getElementById('formEndLockedNote').style.display = endLocked ? 'block' : 'none';
-  document.getElementById('saveFormBtn').textContent = album ? 'Save changes' : 'Schedule capture';
+  document.getElementById('saveFormBtn').textContent = album ? CONTENT.albumForm.saveButtonEdit : CONTENT.albumForm.saveButtonNew;
   showScreen('albumFormView');
 }
 
@@ -168,7 +199,7 @@ document.getElementById('saveFormBtn').addEventListener('click', async () => {
   if (state.formStartDate && state.formEndDate) {
     const diffDays = (state.formEndDate - state.formStartDate) / (1000 * 60 * 60 * 24);
     if (diffDays > 3) {
-      showConfirm(`Your capture is scheduled to last over ${Math.round(diffDays)} days. Are you sure?`, doSave);
+      showConfirm(CONTENT.albumForm.longCaptureWarning(Math.round(diffDays)), doSave);
       return;
     }
   }
@@ -223,7 +254,7 @@ document.getElementById('pickerNowLink').addEventListener('click', () => {
   state.formStartVal = 'Now'; state.formStartIsNow = true; state.formStartDate = new Date();
   document.getElementById('formStartField').textContent = 'Now';
   document.getElementById('pickerModal').style.display = 'none';
-  document.getElementById('saveFormBtn').textContent = 'Start capture';
+  document.getElementById('saveFormBtn').textContent = CONTENT.albumForm.saveButtonStartNow;
 });
 document.getElementById('pickerDone').addEventListener('click', () => {
   const day = parseInt(document.getElementById('calGrid').dataset.selectedDay || new Date().getDate());
@@ -314,7 +345,7 @@ async function deleteSingle(idx) {
   await api(`/videos/${v.id}/delete`, { method: 'POST' });
   state.videos.splice(idx, 1);
   renderGrid();
-  showToast('1 file deleted.', async () => {
+  showToast(CONTENT.videos.deleteSingleToast, async () => {
     await api(`/videos/${v.id}/restore`, { method: 'POST' });
     state.videos.push(v);
     sortVideos(document.getElementById('sortSelect').value);
@@ -324,17 +355,17 @@ async function deleteSingle(idx) {
 
 document.getElementById('downloadStarredBtn').addEventListener('click', () => {
   const count = state.videos.filter(v => v.mark === 'save').length;
-  showConfirm(`You're about to download ${count} file${count===1?'':'s'} as a .zip. Are you sure?`, () => {
+  showConfirm(CONTENT.videos.downloadStarredConfirm(count), () => {
     window.open(`/api/albums/${state.currentAlbumId}/download-starred-zip`, '_blank');
   });
 });
 document.getElementById('deleteMarkedBtn').addEventListener('click', () => {
   const marked = state.videos.filter(v => v.mark === 'delete');
-  showConfirm(`You're about to delete ${marked.length} file${marked.length===1?'':'s'}. Are you sure?`, async () => {
+  showConfirm(CONTENT.videos.deleteMarkedConfirm(marked.length), async () => {
     for (const v of marked) await api(`/videos/${v.id}/delete`, { method: 'POST' });
     state.videos = state.videos.filter(v => v.mark !== 'delete');
     renderGrid();
-    showToast(`${marked.length} file${marked.length===1?'':'s'} deleted.`, null);
+    showToast(CONTENT.videos.deleteMultipleToast(marked.length), null);
   });
 });
 
@@ -408,10 +439,10 @@ document.getElementById('backFromDeletedBtn').addEventListener('click', () => sh
 async function showDeletedFiles() {
   showScreen('deletedView');
   const client = state.clients.find(c => c.id === state.currentClientId);
-  document.getElementById('deletedClientTitle').textContent = `${client.name} — deleted files`;
+  document.getElementById('deletedClientTitle').textContent = `${client.name} ${CONTENT.deletedFiles.titleSuffix}`;
   // NOTE: needs a dedicated GET /api/clients/:id/deleted-videos endpoint,
   // grouped by album, to fully back this screen — not yet added to videos.js.
-  document.getElementById('deletedGroups').innerHTML = '<div class="meta-text">Deleted files listing endpoint not yet built server-side.</div>';
+  document.getElementById('deletedGroups').innerHTML = `<div class="meta-text">${CONTENT.deletedFiles.notBuiltYetNote}</div>`;
 }
 
 // --- Toasts & confirm ---
@@ -422,7 +453,7 @@ function showToast(label, onUndo) {
   t.appendChild(span);
   if (onUndo) {
     const undo = document.createElement('button');
-    undo.className = 'undo-btn'; undo.textContent = 'Undo';
+    undo.className = 'undo-btn'; undo.textContent = CONTENT.videos.undoLink;
     undo.addEventListener('click', () => { onUndo(); t.remove(); });
     t.appendChild(undo);
   }
