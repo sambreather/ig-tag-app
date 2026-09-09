@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tag Capture</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+  <!-- Login screen -->
+  <div id="screenLogin" class="screen centered">
+    <div class="login-card">
+      <h1>Tag Capture</h1>
+      <input id="loginPassword" type="password" placeholder="Team password">
+      <button id="loginBtn" class="btn-primary">Log in</button>
+      <div id="loginError" class="error-text"></div>
+    </div>
+  </div>
+
+  <!-- Main app -->
+  <div id="screenApp" class="screen" style="display:none;">
+    <div class="topbar">
+      <select id="clientSelect"></select>
+      <div class="topbar-actions">
+        <button id="deletedFilesBtn"><i class="icon-trash"></i> Deleted</button>
+        <button id="newAlbumBtn" class="btn-primary"><i class="icon-plus"></i> New album</button>
+      </div>
+    </div>
+
+    <div id="albumsView">
+      <div id="albumList" class="album-list"></div>
+    </div>
+
+    <div id="albumFormView" style="display:none;">
+      <div class="form-header">
+        <button id="backFromFormBtn" class="icon-btn"><i class="icon-back"></i></button>
+        <div id="formTitle" class="screen-title"></div>
+      </div>
+      <label>Name</label>
+      <input id="formName" type="text" placeholder="e.g. Governors Ball">
+      <label>Start</label>
+      <button id="formStartField" class="field-btn"></button>
+      <div id="formStartLockedNote" class="locked-note" style="display:none;">Already started — locked.</div>
+      <label>End</label>
+      <button id="formEndField" class="field-btn"></button>
+      <div id="formEndLockedNote" class="locked-note" style="display:none;">Already ended — locked.</div>
+      <button id="saveFormBtn" class="btn-primary" style="margin-top:16px;"></button>
+    </div>
+
+    <div id="videosView" style="display:none;">
+      <div class="form-header">
+        <button id="backBtn" class="icon-btn"><i class="icon-back"></i></button>
+        <div>
+          <div id="albumTitle" class="screen-title"></div>
+          <div id="albumMeta" class="meta-text"></div>
+        </div>
+      </div>
+      <div class="video-toolbar">
+        <div class="toolbar-left">
+          <button id="downloadStarredBtn" class="btn-outline-green" style="display:none;"><i class="icon-download"></i> <span id="starredCount"></span></button>
+          <button id="deleteMarkedBtn" class="btn-outline-red" style="display:none;"><i class="icon-trash"></i> <span id="markedCount"></span></button>
+        </div>
+        <div class="toolbar-right">
+          <select id="sortSelect">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="az">Alphabetical</option>
+          </select>
+          <button id="sizeToggle" class="icon-btn"><i class="icon-grid"></i></button>
+        </div>
+      </div>
+      <div id="gridContainer" class="grid-container">
+        <div id="videoGrid" class="video-grid"></div>
+      </div>
+    </div>
+
+    <div id="deletedView" style="display:none;">
+      <div class="form-header">
+        <button id="backFromDeletedBtn" class="icon-btn"><i class="icon-back"></i></button>
+        <div>
+          <div id="deletedClientTitle" class="screen-title"></div>
+          <div class="meta-text">Kept 30 days, then permanently removed</div>
+        </div>
+      </div>
+      <div id="deletedGroups"></div>
+    </div>
+  </div>
+
+  <!-- Unified video preview / review modal -->
+  <div id="previewModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" id="previewCard">
+      <div class="modal-card-header">
+        <div id="previewCounter" class="meta-text"></div>
+        <div id="previewTagger" class="meta-text"></div>
+        <button id="closePreview" class="icon-btn"><i class="icon-x"></i></button>
+      </div>
+      <video id="previewVideoEl" class="preview-video" playsinline></video>
+      <div class="modal-card-controls">
+        <button id="prevArrow" class="icon-btn"><i class="icon-chevron-left"></i></button>
+        <div id="previewActionsNormal" class="modal-actions">
+          <button id="previewDlBtn" class="icon-btn"><i class="icon-download"></i></button>
+          <button id="previewStarBtn" class="icon-btn"><i class="icon-star"></i></button>
+          <button id="previewTrashBtn" class="icon-btn"><i class="icon-trash"></i></button>
+        </div>
+        <div id="previewActionsDeleted" class="modal-actions" style="display:none;">
+          <button id="previewRestoreBtn" class="btn-small">Restore</button>
+        </div>
+        <button id="nextArrow" class="icon-btn"><i class="icon-chevron-right"></i></button>
+      </div>
+      <div id="previewHintRow" class="hint-row">Space play/pause · ←→ scrub 5s · ↑↓ prev/next · S save · D delete</div>
+    </div>
+  </div>
+
+  <!-- Date/time picker popup -->
+  <div id="pickerModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card small">
+      <div id="pickerNowLink" class="now-link" style="display:none;">Start Capturing Now</div>
+      <div class="cal-nav">
+        <button id="calPrev" class="icon-btn"><i class="icon-chevron-left"></i></button>
+        <div id="calMonthLabel" class="meta-text bold"></div>
+        <button id="calNext" class="icon-btn"><i class="icon-chevron-right"></i></button>
+      </div>
+      <div id="calGrid" class="cal-grid"></div>
+      <label>Time</label>
+      <select id="timeSelect"></select>
+      <div class="modal-buttons">
+        <button id="pickerCancel" class="btn-secondary">Cancel</button>
+        <button id="pickerDone" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation popup -->
+  <div id="confirmModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card small centered-text">
+      <div id="confirmText"></div>
+      <div class="modal-buttons">
+        <button id="confirmCancelBtn" class="btn-secondary">Cancel</button>
+        <button id="confirmYesBtn" class="btn-primary">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastHolder"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
