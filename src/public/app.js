@@ -40,7 +40,9 @@ function showLogin() {
   document.getElementById('screenLogin').style.display = 'flex';
   document.getElementById('screenApp').style.display = 'none';
 }
-document.getElementById('loginBtn').addEventListener('click', async () => {
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+async function doLogin() {
   state.password = document.getElementById('loginPassword').value;
   try {
     await api('/clients');
@@ -49,7 +51,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   } catch {
     document.getElementById('loginError').textContent = 'Incorrect password.';
   }
-});
+}
 
 async function startApp() {
   document.getElementById('screenLogin').style.display = 'none';
@@ -177,14 +179,16 @@ document.getElementById('saveFormBtn').addEventListener('click', async () => {
 function openPicker(field) {
   state.pickerField = field;
   document.getElementById('pickerNowLink').style.display = field === 'start' ? 'block' : 'none';
-  const now = new Date();
-  state.calMonth = now.getMonth(); state.calYear = now.getFullYear();
-  renderCalendar();
+  const existing = field === 'start' ? state.formStartDate : state.formEndDate;
+  const base = existing || new Date();
+  state.calMonth = base.getMonth(); state.calYear = base.getFullYear();
+  renderCalendar(existing);
   document.getElementById('timeSelect').innerHTML = Array.from({ length: 24 }, (_, h) =>
     `<option value="${h}">${String(h).padStart(2, '0')}:00</option>`).join('');
+  document.getElementById('timeSelect').value = existing ? existing.getHours() : new Date().getHours();
   document.getElementById('pickerModal').style.display = 'flex';
 }
-function renderCalendar() {
+function renderCalendar(selectedDate) {
   const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   document.getElementById('calMonthLabel').textContent = `${monthNames[state.calMonth]} ${state.calYear}`;
   const first = new Date(state.calYear, state.calMonth, 1);
@@ -197,17 +201,23 @@ function renderCalendar() {
     const thisDate = new Date(state.calYear, state.calMonth, d);
     const isPast = thisDate < today;
     const isToday = thisDate.getTime() === today.getTime();
-    html += `<button data-day="${d}" ${isPast ? 'disabled' : ''} class="${isToday ? 'today' : ''}">${d}</button>`;
+    const isSelected = selectedDate && selectedDate.getFullYear() === state.calYear && selectedDate.getMonth() === state.calMonth && selectedDate.getDate() === d;
+    html += `<button data-day="${d}" ${isPast ? 'disabled' : ''} class="${isSelected ? 'selected' : (isToday ? 'today' : '')}">${d}</button>`;
   }
   grid.innerHTML = html;
+  if (selectedDate && selectedDate.getFullYear() === state.calYear && selectedDate.getMonth() === state.calMonth) {
+    grid.dataset.selectedDay = selectedDate.getDate();
+  } else {
+    delete grid.dataset.selectedDay;
+  }
   grid.querySelectorAll('button:not(:disabled)').forEach(btn => btn.addEventListener('click', () => {
     grid.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     grid.dataset.selectedDay = btn.dataset.day;
   }));
 }
-document.getElementById('calPrev').addEventListener('click', () => { state.calMonth--; if (state.calMonth < 0) { state.calMonth = 11; state.calYear--; } renderCalendar(); });
-document.getElementById('calNext').addEventListener('click', () => { state.calMonth++; if (state.calMonth > 11) { state.calMonth = 0; state.calYear++; } renderCalendar(); });
+document.getElementById('calPrev').addEventListener('click', () => { state.calMonth--; if (state.calMonth < 0) { state.calMonth = 11; state.calYear--; } renderCalendar(state.pickerField === 'start' ? state.formStartDate : state.formEndDate); });
+document.getElementById('calNext').addEventListener('click', () => { state.calMonth++; if (state.calMonth > 11) { state.calMonth = 0; state.calYear++; } renderCalendar(state.pickerField === 'start' ? state.formStartDate : state.formEndDate); });
 document.getElementById('pickerCancel').addEventListener('click', () => document.getElementById('pickerModal').style.display = 'none');
 document.getElementById('pickerNowLink').addEventListener('click', () => {
   state.formStartVal = 'Now'; state.formStartIsNow = true; state.formStartDate = new Date();
