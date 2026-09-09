@@ -14,7 +14,7 @@ const CONTENT = {
   },
 
   topbar: {
-    deletedButton: 'Deleted',
+    deletedButton: 'Deleted Files',
     newAlbumButton: 'New Capture',
   },
 
