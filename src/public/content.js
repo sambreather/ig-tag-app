@@ -40,6 +40,7 @@ const CONTENT = {
     saveButtonEdit: 'Save Changes',
     startCapturingNowLink: 'Start Capturing Now',
     longCaptureWarning: (days) => `Your capture is scheduled to last over ${days} days. Are you sure?`,
+    missingDatesWarning: 'Please select both a start and end time before saving.',
   },
 
   picker: {
