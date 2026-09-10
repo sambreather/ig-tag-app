@@ -28,7 +28,7 @@ function applyContent() {
   document.getElementById('loginBtn').textContent = CONTENT.login.loginButton;
 
   document.getElementById('deletedFilesBtn').innerHTML = `<i class="icon-trash"></i> ${CONTENT.topbar.deletedButton}`;
-  document.getElementById('newAlbumBtn').innerHTML = `<i class="icon-plus"></i> ${CONTENT.topbar.newAlbumButton}`;
+  document.getElementById('newAlbumBtn').innerHTML = `<i class="icon-plus icon-green"></i> ${CONTENT.topbar.newAlbumButton}`;
 
   document.getElementById('formName').placeholder = CONTENT.albumForm.namePlaceholder;
   document.getElementById('formStartLockedNote').textContent = CONTENT.albumForm.startLockedNote;
@@ -162,10 +162,10 @@ function openAlbumForm(albumId) {
   state.formTarget = { clientId: state.currentClientId, albumId };
   document.getElementById('formTitle').textContent = album ? CONTENT.albumForm.titleEdit : CONTENT.albumForm.titleNew;
   document.getElementById('formName').value = album ? album.name : '';
-  state.formStartVal = album ? fmtShort(album.start) : '';
-  state.formEndVal = album ? fmtShort(album.end) : '';
-  state.formStartDate = album ? new Date(album.start) : null;
-  state.formEndDate = album ? new Date(album.end) : null;
+  state.formStartVal = album && album.start ? fmtShort(album.start) : '';
+  state.formEndVal = album && album.end ? fmtShort(album.end) : '';
+  state.formStartDate = album && album.start ? new Date(album.start) : null;
+  state.formEndDate = album && album.end ? new Date(album.end) : null;
   state.formStartIsNow = false;
 
   const startLocked = album && album.status === 'capturing';
@@ -184,6 +184,10 @@ document.getElementById('formStartField').addEventListener('click', () => { if (
 document.getElementById('formEndField').addEventListener('click', () => { if (!event.target.disabled) openPicker('end'); });
 
 document.getElementById('saveFormBtn').addEventListener('click', async () => {
+  if (!state.formStartDate || !state.formEndDate) {
+    showToast(CONTENT.albumForm.missingDatesWarning, null);
+    return;
+  }
   const doSave = async () => {
     const { clientId, albumId } = state.formTarget;
     const body = { name: document.getElementById('formName').value };
@@ -242,7 +246,7 @@ function renderCalendar(selectedDate) {
     delete grid.dataset.selectedDay;
   }
   grid.querySelectorAll('button:not(:disabled)').forEach(btn => btn.addEventListener('click', () => {
-    grid.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+    grid.querySelectorAll('button').forEach(b => b.classList.remove('selected', 'today'));
     btn.classList.add('selected');
     grid.dataset.selectedDay = btn.dataset.day;
   }));
