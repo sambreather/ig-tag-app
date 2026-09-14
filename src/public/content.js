@@ -4,10 +4,10 @@
 // for a simple text change.
 
 const CONTENT = {
-  pageTitle: 'CYOA ClipCatch',
+  pageTitle: 'ClipCatch',
 
   login: {
-    heading: 'CYOA ClipCatch',
+    heading: 'ClipCatch',
     passwordPlaceholder: 'Enter password',
     loginButton: 'Log In',
     errorIncorrect: 'Incorrect password.',
