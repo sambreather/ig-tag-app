@@ -48,6 +48,20 @@ function applyContent() {
   document.getElementById('previewHintRow').textContent = CONTENT.preview.hintRow;
   document.getElementById('previewRestoreBtn').textContent = CONTENT.deletedFiles.restoreButton;
   document.querySelector('#deletedView .meta-text').textContent = CONTENT.deletedFiles.retentionNote;
+
+  document.querySelector('#noClientsView .screen-title').textContent = CONTENT.clients.addFirstClientHeading;
+  document.getElementById('newClientName').placeholder = CONTENT.clients.namePlaceholder;
+  document.getElementById('newClientIgId').placeholder = CONTENT.clients.igIdPlaceholder;
+  document.getElementById('newClientToken').placeholder = CONTENT.clients.tokenPlaceholder;
+  document.getElementById('addClientBtn').textContent = CONTENT.clients.addButton;
+  document.querySelector('#editClientView .screen-title').textContent = CONTENT.clients.editHeading;
+  document.getElementById('saveClientEditBtn').textContent = CONTENT.clients.saveButton;
+  document.querySelectorAll('#noClientsView label')[0].textContent = CONTENT.clients.nameLabel;
+  document.querySelectorAll('#noClientsView label')[1].textContent = CONTENT.clients.igIdLabel;
+  document.querySelectorAll('#noClientsView label')[2].textContent = CONTENT.clients.tokenLabel;
+  document.querySelectorAll('#editClientView label')[0].textContent = CONTENT.clients.nameLabel;
+  document.querySelectorAll('#editClientView label')[1].textContent = CONTENT.clients.igIdLabel;
+  document.querySelectorAll('#editClientView label')[2].textContent = CONTENT.clients.tokenLabel;
 }
 applyContent();
 
@@ -106,9 +120,13 @@ document.getElementById('addClientBtn').addEventListener('click', async () => {
   const name = document.getElementById('newClientName').value.trim();
   const igUserId = document.getElementById('newClientIgId').value.trim();
   const accessToken = document.getElementById('newClientToken').value.trim();
-  if (!name) { showAlert('Please enter a client name.'); return; }
-  await api('/clients', { method: 'POST', body: JSON.stringify({ name, igUserId, accessToken }) });
-  startApp();
+  if (!name) { showAlert(CONTENT.clients.missingNameWarning); return; }
+  try {
+    await api('/clients', { method: 'POST', body: JSON.stringify({ name, igUserId, accessToken }) });
+    startApp();
+  } catch (err) {
+    showAlert(CONTENT.clients.addFailedWarning);
+  }
 });
 
 if (state.password) startApp().catch(showLogin); else showLogin();
@@ -128,17 +146,21 @@ document.getElementById('backFromEditClientBtn').addEventListener('click', () =>
 });
 document.getElementById('saveClientEditBtn').addEventListener('click', async () => {
   const name = document.getElementById('editClientName').value.trim();
-  if (!name) { showAlert('Please enter a client name.'); return; }
-  await api(`/clients/${state.currentClientId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      name,
-      igUserId: document.getElementById('editClientIgId').value.trim(),
-      accessToken: document.getElementById('editClientToken').value.trim(),
-    }),
-  });
-  document.getElementById('editClientView').style.display = 'none';
-  startApp();
+  if (!name) { showAlert(CONTENT.clients.missingNameWarning); return; }
+  try {
+    await api(`/clients/${state.currentClientId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        name,
+        igUserId: document.getElementById('editClientIgId').value.trim(),
+        accessToken: document.getElementById('editClientToken').value.trim(),
+      }),
+    });
+    document.getElementById('editClientView').style.display = 'none';
+    startApp();
+  } catch (err) {
+    showAlert(CONTENT.clients.saveFailedWarning);
+  }
 });
 
 // --- Screens ---
@@ -231,7 +253,7 @@ document.getElementById('formEndField').addEventListener('click', () => { if (!e
 document.getElementById('saveFormBtn').addEventListener('click', async () => {
   const name = document.getElementById('formName').value.trim();
   if (!name) {
-    showAlert('Please enter a name for this capture before saving.');
+    showAlert(CONTENT.albumForm.missingNameWarning);
     return;
   }
   if (!state.formStartDate || !state.formEndDate) {
@@ -239,7 +261,7 @@ document.getElementById('saveFormBtn').addEventListener('click', async () => {
     return;
   }
   if (state.formEndDate <= state.formStartDate) {
-    showAlert('The end date/time must be after the start date/time.');
+    showAlert(CONTENT.albumForm.endBeforeStartWarning);
     return;
   }
   const doSave = async () => {
