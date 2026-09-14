@@ -8,7 +8,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, '..', '..', 'data.json');
+// The data file lives wherever DATA_DIR points to. By default that's the
+// project folder itself - fine for local testing, but on Railway this
+// resets on every redeploy since it's not a persisted location. Set the
+// DATA_DIR environment variable to a mounted Volume's path (e.g. /data)
+// to make this survive redeploys. See README for the full explanation.
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', '..');
+const DB_PATH = path.join(DATA_DIR, 'data.json');
 
 function load() {
   if (!fs.existsSync(DB_PATH)) {
