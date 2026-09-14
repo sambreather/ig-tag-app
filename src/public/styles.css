@@ -34,6 +34,7 @@ label { font-size: 12px; color: var(--text-secondary); display: block; margin: 1
 .btn-plain { background: var(--surface-1); color: var(--text-primary); }
 .icon-green::before { color: var(--green); }
 .deleted-btn-row { display: flex; justify-content: flex-end; margin-top: 16px; }
+#formName { width: 50%; min-width: 220px; }
 .btn-secondary { background: var(--surface-1); }
 .btn-small { font-size: 12px; padding: 6px 10px; }
 .btn-outline-green { border: 2px solid var(--green); color: var(--green); background: var(--surface-1); }
