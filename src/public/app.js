@@ -184,13 +184,22 @@ document.getElementById('formStartField').addEventListener('click', () => { if (
 document.getElementById('formEndField').addEventListener('click', () => { if (!event.target.disabled) openPicker('end'); });
 
 document.getElementById('saveFormBtn').addEventListener('click', async () => {
+  const name = document.getElementById('formName').value.trim();
+  if (!name) {
+    showAlert('Please enter a name for this capture before saving.');
+    return;
+  }
   if (!state.formStartDate || !state.formEndDate) {
-    showToast(CONTENT.albumForm.missingDatesWarning, null);
+    showAlert(CONTENT.albumForm.missingDatesWarning);
+    return;
+  }
+  if (state.formEndDate <= state.formStartDate) {
+    showAlert('The end date/time must be after the start date/time.');
     return;
   }
   const doSave = async () => {
     const { clientId, albumId } = state.formTarget;
-    const body = { name: document.getElementById('formName').value };
+    const body = { name };
     if (state.formStartIsNow) body.startNow = true;
     else if (state.formStartDate) body.start = state.formStartDate.toISOString();
     if (state.formEndDate) body.end = state.formEndDate.toISOString();
@@ -215,12 +224,15 @@ function openPicker(field) {
   state.pickerField = field;
   document.getElementById('pickerNowLink').style.display = field === 'start' ? 'block' : 'none';
   const existing = field === 'start' ? state.formStartDate : state.formEndDate;
-  const base = existing || new Date();
+  // If opening the End picker for the first time (no end chosen yet) and a
+  // Start has already been set, default to Start + 1 hour for convenience.
+  const prefill = existing || (field === 'end' && state.formStartDate ? new Date(state.formStartDate.getTime() + 60 * 60 * 1000) : null);
+  const base = prefill || new Date();
   state.calMonth = base.getMonth(); state.calYear = base.getFullYear();
-  renderCalendar(existing);
+  renderCalendar(prefill);
   document.getElementById('timeSelect').innerHTML = Array.from({ length: 24 }, (_, h) =>
     `<option value="${h}">${String(h).padStart(2, '0')}:00</option>`).join('');
-  document.getElementById('timeSelect').value = existing ? existing.getHours() : new Date().getHours();
+  document.getElementById('timeSelect').value = base.getHours();
   document.getElementById('pickerModal').style.display = 'flex';
 }
 function renderCalendar(selectedDate) {
@@ -229,6 +241,7 @@ function renderCalendar(selectedDate) {
   const first = new Date(state.calYear, state.calMonth, 1);
   const daysInMonth = new Date(state.calYear, state.calMonth + 1, 0).getDate();
   const today = new Date(); today.setHours(0,0,0,0);
+  const showTodayAsDefault = !selectedDate; // only fall back to highlighting "today" when nothing has been chosen yet
   const grid = document.getElementById('calGrid');
   let html = ['S','M','T','W','T','F','S'].map(d => `<div class="cal-day-label">${d}</div>`).join('');
   for (let i = 0; i < first.getDay(); i++) html += '<div></div>';
@@ -237,7 +250,7 @@ function renderCalendar(selectedDate) {
     const isPast = thisDate < today;
     const isToday = thisDate.getTime() === today.getTime();
     const isSelected = selectedDate && selectedDate.getFullYear() === state.calYear && selectedDate.getMonth() === state.calMonth && selectedDate.getDate() === d;
-    html += `<button data-day="${d}" ${isPast ? 'disabled' : ''} class="${isSelected ? 'selected' : (isToday ? 'today' : '')}">${d}</button>`;
+    html += `<button data-day="${d}" ${isPast ? 'disabled' : ''} class="${isSelected ? 'selected' : (isToday && showTodayAsDefault ? 'today' : '')}">${d}</button>`;
   }
   grid.innerHTML = html;
   if (selectedDate && selectedDate.getFullYear() === state.calYear && selectedDate.getMonth() === state.calMonth) {
@@ -464,6 +477,12 @@ function showToast(label, onUndo) {
   document.getElementById('toastHolder').appendChild(t);
   setTimeout(() => t.remove(), 4000);
 }
+function showAlert(text) {
+  document.getElementById('alertText').textContent = text;
+  document.getElementById('alertModal').style.display = 'flex';
+}
+document.getElementById('alertOkBtn').addEventListener('click', () => document.getElementById('alertModal').style.display = 'none');
+
 function showConfirm(text, onYes) {
   document.getElementById('confirmText').textContent = text;
   document.getElementById('confirmModal').style.display = 'flex';
