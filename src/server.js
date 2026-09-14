@@ -3,6 +3,12 @@ const express = require('express');
 const path = require('path');
 const cron = require('node-cron');
 
+// Safety net: log unexpected errors instead of letting them silently kill
+// the whole server (which was very likely the real cause of the crash/data
+// loss cycle during testing).
+process.on('unhandledRejection', (err) => console.error('Unhandled rejection:', err));
+process.on('uncaughtException', (err) => console.error('Uncaught exception:', err));
+
 const clientsRouter = require('./routes/clients');
 const albumsRouter = require('./routes/albums');
 const videosRouter = require('./routes/videos');
