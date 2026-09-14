@@ -25,6 +25,17 @@
       <button id="newAlbumBtn" class="btn-plain"><i class="icon-plus icon-green"></i> New album</button>
     </div>
 
+    <div id="noClientsView" style="display:none;">
+      <div class="screen-title" style="margin-bottom:14px;">Add your first client</div>
+      <label>Client name</label>
+      <input id="newClientName" type="text" placeholder="e.g. Olivia Dean">
+      <label>Instagram Business account ID</label>
+      <input id="newClientIgId" type="text" placeholder="From Meta's dashboard">
+      <label>Access token</label>
+      <input id="newClientToken" type="text" placeholder="Generated in Meta's developer dashboard">
+      <button id="addClientBtn" class="btn-primary" style="margin-top:16px;">Add client</button>
+    </div>
+
     <div id="albumsView">
       <div id="albumList" class="album-list"></div>
       <div class="deleted-btn-row">
