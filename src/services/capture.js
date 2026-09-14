@@ -8,60 +8,65 @@ const instagram = require('./instagram');
 const storage = require('./storage');
 
 async function pollActiveAlbums() {
-  const data = db.load();
-  const now = new Date();
+  try {
+    const data = db.load();
+    const now = new Date();
 
-  for (const album of data.albums) {
-    if (album.status !== 'capturing') continue;
+    for (const album of data.albums) {
+      if (album.status !== 'capturing') continue;
 
-    // Auto-stop albums whose end time has passed.
-    if (album.end && new Date(album.end) <= now) {
-      album.status = 'done';
-      continue;
-    }
-
-    const client = data.clients.find(c => c.id === album.clientId);
-    if (!client || !client.accessToken || !client.igUserId) continue;
-
-    try {
-      const mentions = await instagram.fetchRecentMentions(client.accessToken, client.igUserId);
-      const alreadySeen = new Set(data.videos.filter(v => v.albumId === album.id).map(v => v.sourceMediaId));
-
-      for (const mention of mentions) {
-        if (alreadySeen.has(mention.id)) continue; // already captured
-
-        const buffer = await instagram.downloadMediaFile(mention.media_url);
-        const ext = mention.media_type === 'VIDEO' ? 'mp4' : 'jpg';
-        const filename = `${mention.username}_${Date.now()}.${ext}`;
-
-        const key = await storage.uploadMedia({
-          clientId: client.id,
-          albumId: album.id,
-          filename,
-          buffer,
-          contentType: mention.media_type === 'VIDEO' ? 'video/mp4' : 'image/jpeg',
-        });
-
-        data.videos.push({
-          id: `v_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          albumId: album.id,
-          clientId: client.id,
-          sourceMediaId: mention.id,
-          tagger: mention.username,
-          type: mention.media_type === 'VIDEO' ? 'video' : 'photo',
-          storageKey: key,
-          timestamp: mention.timestamp,
-          mark: null,
-          deleted: false,
-        });
+      if (album.end && new Date(album.end) <= now) {
+        album.status = 'done';
+        continue;
       }
-    } catch (err) {
-      // A single client's API hiccup shouldn't crash the whole poll cycle.
-      console.error(`Capture poll failed for client ${client.id}:`, err.message);
-    }
-  }
 
-  db.save(data);
+      const client = data.clients.find(c => c.id === album.clientId);
+      if (!client || !client.accessToken || !client.igUserId) continue;
+
+      try {
+        const mentions = await instagram.fetchRecentMentions(client.accessToken, client.igUserId);
+        const alreadySeen = new Set(data.videos.filter(v => v.albumId === album.id).map(v => v.sourceMediaId));
+
+        for (const mention of mentions) {
+          if (alreadySeen.has(mention.id)) continue;
+
+          const buffer = await instagram.downloadMediaFile(mention.media_url);
+          const ext = mention.media_type === 'VIDEO' ? 'mp4' : 'jpg';
+          const filename = `${mention.username}_${Date.now()}.${ext}`;
+
+          const key = await storage.uploadMedia({
+            clientId: client.id,
+            albumId: album.id,
+            filename,
+            buffer,
+            contentType: mention.media_type === 'VIDEO' ? 'video/mp4' : 'image/jpeg',
+          });
+
+          data.videos.push({
+            id: `v_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            albumId: album.id,
+            clientId: client.id,
+            sourceMediaId: mention.id,
+            tagger: mention.username,
+            type: mention.media_type === 'VIDEO' ? 'video' : 'photo',
+            storageKey: key,
+            timestamp: mention.timestamp,
+            mark: null,
+            deleted: false,
+          });
+        }
+      } catch (err) {
+        // A single client's API hiccup shouldn't crash the whole poll cycle.
+        console.error(`Capture poll failed for client ${client.id}:`, err.message);
+      }
+    }
+
+    db.save(data);
+  } catch (err) {
+    // Nothing in this function should ever be able to take the whole
+    // server down - log it and move on to the next scheduled run.
+    console.error('pollActiveAlbums failed entirely:', err);
+  }
 }
 
 module.exports = { pollActiveAlbums };
