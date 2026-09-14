@@ -21,6 +21,17 @@ router.post('/clients', (req, res) => {
   res.status(201).json(client);
 });
 
+router.patch('/clients/:clientId', (req, res) => {
+  const data = db.load();
+  const client = data.clients.find(c => c.id === req.params.clientId);
+  if (!client) return res.status(404).json({ error: 'Client not found' });
+  if (req.body.name !== undefined) client.name = req.body.name;
+  if (req.body.igUserId !== undefined) client.igUserId = req.body.igUserId;
+  if (req.body.accessToken !== undefined) client.accessToken = req.body.accessToken;
+  db.save(data);
+  res.json(client);
+});
+
 // Overall storage usage, for the storage-usage indicator.
 router.get('/storage-usage', async (req, res) => {
   const bytes = await storage.getTotalStorageBytes();
