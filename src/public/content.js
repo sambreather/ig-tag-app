@@ -41,6 +41,24 @@ const CONTENT = {
     startCapturingNowLink: 'Start Capturing Now',
     longCaptureWarning: (days) => `Your capture is scheduled to last over ${days} days. Are you sure?`,
     missingDatesWarning: 'Please select both a start and end time before saving.',
+    missingNameWarning: 'Please enter a name for this capture before saving.',
+    endBeforeStartWarning: 'The end date/time must be after the start date/time.',
+  },
+
+  clients: {
+    addFirstClientHeading: 'Add your first client',
+    nameLabel: 'Client name',
+    namePlaceholder: 'e.g. Olivia Dean',
+    igIdLabel: 'Instagram Business Account ID',
+    igIdPlaceholder: 'From Meta\u2019s dashboard',
+    tokenLabel: 'Access token',
+    tokenPlaceholder: 'Generated in Meta\u2019s developer dashboard',
+    addButton: 'Add Client',
+    editHeading: 'Edit Client',
+    saveButton: 'Save Changes',
+    missingNameWarning: 'Please enter a client name.',
+    saveFailedWarning: 'Something went wrong saving these changes. Please try again.',
+    addFailedWarning: 'Something went wrong adding this client. Please try again.',
   },
 
   picker: {
@@ -69,6 +87,6 @@ const CONTENT = {
   },
 
   preview: {
-    hintRow: 'Space: Play/Pause · ←→: Scrub 5s · ↑↓: Prev/Next · S: Save · D: Delete',
+    hintRow: 'Space: Play/Pause || ←→: Scrub 5s || ↑↓: Prev/Next || S: Save || D: Delete',
   },
 };
