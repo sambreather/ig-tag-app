@@ -113,6 +113,34 @@ document.getElementById('addClientBtn').addEventListener('click', async () => {
 
 if (state.password) startApp().catch(showLogin); else showLogin();
 
+document.getElementById('editClientBtn').addEventListener('click', () => {
+  const client = state.clients.find(c => c.id === state.currentClientId);
+  if (!client) return;
+  document.getElementById('editClientName').value = client.name || '';
+  document.getElementById('editClientIgId').value = client.igUserId || '';
+  document.getElementById('editClientToken').value = client.accessToken || '';
+  document.getElementById('albumsView').style.display = 'none';
+  document.getElementById('editClientView').style.display = 'block';
+});
+document.getElementById('backFromEditClientBtn').addEventListener('click', () => {
+  document.getElementById('editClientView').style.display = 'none';
+  document.getElementById('albumsView').style.display = 'block';
+});
+document.getElementById('saveClientEditBtn').addEventListener('click', async () => {
+  const name = document.getElementById('editClientName').value.trim();
+  if (!name) { showAlert('Please enter a client name.'); return; }
+  await api(`/clients/${state.currentClientId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      name,
+      igUserId: document.getElementById('editClientIgId').value.trim(),
+      accessToken: document.getElementById('editClientToken').value.trim(),
+    }),
+  });
+  document.getElementById('editClientView').style.display = 'none';
+  startApp();
+});
+
 // --- Screens ---
 function showScreen(id) {
   ['albumsView', 'albumFormView', 'videosView', 'deletedView'].forEach(s => {
