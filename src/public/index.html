@@ -22,7 +22,22 @@
   <div id="screenApp" class="screen" style="display:none;">
     <div class="topbar">
       <select id="clientSelect"></select>
+      <button id="editClientBtn" class="icon-btn" aria-label="Edit client details"><i class="icon-settings"></i></button>
       <button id="newAlbumBtn" class="btn-plain"><i class="icon-plus icon-green"></i> New album</button>
+    </div>
+
+    <div id="editClientView" style="display:none;">
+      <div class="form-header">
+        <button id="backFromEditClientBtn" class="icon-btn"><i class="icon-back"></i></button>
+        <div class="screen-title">Edit client</div>
+      </div>
+      <label>Client name</label>
+      <input id="editClientName" type="text">
+      <label>Instagram Business account ID</label>
+      <input id="editClientIgId" type="text">
+      <label>Access token</label>
+      <input id="editClientToken" type="text">
+      <button id="saveClientEditBtn" class="btn-primary" style="margin-top:16px;">Save changes</button>
     </div>
 
     <div id="noClientsView" style="display:none;">
