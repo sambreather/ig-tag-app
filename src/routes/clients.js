@@ -10,7 +10,12 @@ router.get('/clients', (req, res) => {
 
 router.post('/clients', (req, res) => {
   const data = db.load();
-  const client = { id: `c_${Date.now()}`, name: req.body.name, igUserId: null, accessToken: null };
+  const client = {
+    id: `c_${Date.now()}`,
+    name: req.body.name,
+    igUserId: req.body.igUserId || null,
+    accessToken: req.body.accessToken || null,
+  };
   data.clients.push(client);
   db.save(data);
   res.status(201).json(client);
