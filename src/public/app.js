@@ -91,8 +91,25 @@ async function startApp() {
   const sel = document.getElementById('clientSelect');
   sel.innerHTML = state.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
   sel.addEventListener('change', () => showAlbums(sel.value));
-  if (state.clients.length) showAlbums(state.clients[0].id);
+
+  if (state.clients.length) {
+    document.getElementById('noClientsView').style.display = 'none';
+    showAlbums(state.clients[0].id);
+  } else {
+    document.querySelector('.topbar').style.display = 'none';
+    document.getElementById('albumsView').style.display = 'none';
+    document.getElementById('noClientsView').style.display = 'block';
+  }
 }
+
+document.getElementById('addClientBtn').addEventListener('click', async () => {
+  const name = document.getElementById('newClientName').value.trim();
+  const igUserId = document.getElementById('newClientIgId').value.trim();
+  const accessToken = document.getElementById('newClientToken').value.trim();
+  if (!name) { showAlert('Please enter a client name.'); return; }
+  await api('/clients', { method: 'POST', body: JSON.stringify({ name, igUserId, accessToken }) });
+  startApp();
+});
 
 if (state.password) startApp().catch(showLogin); else showLogin();
 
