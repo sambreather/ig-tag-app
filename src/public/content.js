@@ -1,21 +1,28 @@
 // content.js
-// Every piece of user-facing text in the app lives here. Edit this file to
-// change wording anywhere on the site - no other file needs to be touched
-// for a simple text change.
+// Every piece of user-facing text in the app lives here, matching what's
+// stored and editable via the admin General Settings screen. This file is
+// only used as a FALLBACK default (e.g. if the settings fetch ever fails) -
+// once the app loads, edits made in the admin panel take priority and never
+// require a redeploy. See defaultContent.js on the server for the seed copy.
+//
+// A few messages use {placeholders} (e.g. {days}, {count}) that get filled
+// in at runtime - keep the {curly braces} when editing those.
 
 const CONTENT = {
-  pageTitle: 'ClipCatch',
+  pageTitle: 'CYOA ClipCatch',
 
   login: {
-    heading: 'ClipCatch',
-    passwordPlaceholder: 'Enter password',
+    heading: 'CYOA ClipCatch',
+    usernamePlaceholder: 'Username',
+    passwordPlaceholder: 'Password',
     loginButton: 'Log In',
-    errorIncorrect: 'Incorrect password.',
+    errorIncorrect: 'Incorrect username or password.',
   },
 
   topbar: {
     deletedButton: 'Deleted Files',
     newAlbumButton: 'New Capture',
+    settingsButton: 'Settings',
   },
 
   albumList: {
@@ -39,7 +46,7 @@ const CONTENT = {
     saveButtonStartNow: 'Start Capture',
     saveButtonEdit: 'Save Changes',
     startCapturingNowLink: 'Start Capturing Now',
-    longCaptureWarning: (days) => `Your capture is scheduled to last over ${days} days. Are you sure?`,
+    longCaptureWarning: 'Your capture is scheduled to last over {days} days. Are you sure?',
     missingDatesWarning: 'Please select both a start and end time before saving.',
     missingNameWarning: 'Please enter a name for this capture before saving.',
     endBeforeStartWarning: 'The end date/time must be after the start date/time.',
@@ -49,13 +56,15 @@ const CONTENT = {
     addFirstClientHeading: 'Add your first client',
     nameLabel: 'Client name',
     namePlaceholder: 'e.g. Olivia Dean',
-    igIdLabel: 'Instagram Business Account ID',
+    igIdLabel: 'Instagram Business account ID',
     igIdPlaceholder: 'From Meta\u2019s dashboard',
     tokenLabel: 'Access token',
     tokenPlaceholder: 'Generated in Meta\u2019s developer dashboard',
-    addButton: 'Add Client',
-    editHeading: 'Edit Client',
-    saveButton: 'Save Changes',
+    addButton: 'Add client',
+    editHeading: 'Edit client',
+    saveButton: 'Save changes',
+    deleteButton: 'Delete client',
+    deleteConfirm: 'Delete this client and all of its captures? This cannot be undone.',
     missingNameWarning: 'Please enter a client name.',
     saveFailedWarning: 'Something went wrong saving these changes. Please try again.',
     addFailedWarning: 'Something went wrong adding this client. Please try again.',
@@ -71,22 +80,33 @@ const CONTENT = {
     sortNewest: 'Newest First',
     sortOldest: 'Oldest First',
     sortAlphabetical: 'Alphabetical',
-    downloadStarredConfirm: (count) => `You're about to download ${count} file${count === 1 ? '' : 's'} as a .zip. Are you sure?`,
-    deleteMarkedConfirm: (count) => `You're about to delete ${count} file${count === 1 ? '' : 's'}. Are you sure?`,
+    downloadStarredConfirm: 'You\u2019re about to download {count} files as a .zip. Are you sure?',
+    deleteMarkedConfirm: 'You\u2019re about to delete {count} files. Are you sure?',
     deleteSingleToast: '1 file deleted.',
-    deleteMultipleToast: (count) => `${count} files deleted.`,
+    deleteMultipleToast: '{count} files deleted.',
     albumDeletedToast: 'Capture deleted.',
     undoLink: 'Undo',
   },
 
   deletedFiles: {
-    titleSuffix: '— deleted files',
+    titleSuffix: '\u2014 deleted files',
     retentionNote: 'Kept for 30 days, then permanently removed.',
     restoreButton: 'Restore',
     notBuiltYetNote: 'Deleted files listing endpoint not yet built server-side.',
   },
 
   preview: {
-    hintRow: 'Space: Play/Pause || ←→: Scrub 5s || ↑↓: Prev/Next || S: Save || D: Delete',
+    hintRow: 'Space: Play/Pause \u00b7 \u2190\u2192: Scrub 5s \u00b7 \u2191\u2193: Prev/Next \u00b7 S: Save \u00b7 D: Delete',
+  },
+
+  settings: {
+    heading: 'General Settings',
+    logoLabel: 'Logo (PNG)',
+    logoUploadButton: 'Upload logo',
+    customCssLabel: 'Custom CSS',
+    customCssPlaceholder: '/* CSS entered here overrides the site\u2019s base styles */',
+    textLabel: 'Site wording',
+    saveButton: 'Save settings',
+    savedToast: 'Settings saved.',
   },
 };
