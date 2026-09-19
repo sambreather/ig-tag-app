@@ -355,7 +355,7 @@ document.getElementById('addClientBtn').addEventListener('click', async () => {
   }
 });
 
-if (state.password) startApp().catch(showLogin); else showLogin();
+if (state.authHeader) startApp().catch(showLogin); else showLogin();
 
 document.getElementById('editClientBtn').addEventListener('click', () => {
   const client = state.clients.find(c => c.id === state.currentClientId);
