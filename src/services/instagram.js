@@ -29,7 +29,21 @@ async function downloadMediaFile(mediaUrl) {
   return Buffer.from(res.data);
 }
 
+/**
+ * Looks up the @username behind a sender ID from a webhook event.
+ * Webhooks only give us an ID, but we want the handle so the file name
+ * and on-screen credit are actually useful to the team.
+ */
+async function fetchUsername(senderId, accessToken) {
+  if (!senderId || !accessToken) return null;
+  const res = await axios.get(`${GRAPH_BASE}/${senderId}`, {
+    params: { fields: 'username', access_token: accessToken },
+  });
+  return res.data?.username || null;
+}
+
 module.exports = {
   fetchRecentMentions,
   downloadMediaFile,
+  fetchUsername,
 };
