@@ -12,7 +12,8 @@
   <div id="screenLogin" class="screen centered">
     <div class="login-card">
       <h1>Tag Capture</h1>
-      <input id="loginPassword" type="password" placeholder="Team password">
+      <input id="loginUsername" type="text" placeholder="Username">
+      <input id="loginPassword" type="password" placeholder="Password">
       <button id="loginBtn" class="btn-primary">Log in</button>
       <div id="loginError" class="error-text"></div>
     </div>
@@ -21,9 +22,33 @@
   <!-- Main app -->
   <div id="screenApp" class="screen" style="display:none;">
     <div class="topbar">
+      <img id="appLogo" class="app-logo" alt="" style="display:none;">
       <select id="clientSelect"></select>
-      <button id="editClientBtn" class="icon-btn" aria-label="Edit client details"><i class="icon-settings"></i></button>
+      <button id="editClientBtn" class="icon-btn admin-only" aria-label="Edit client details"><i class="icon-settings"></i></button>
+      <button id="settingsBtn" class="btn-plain admin-only">Settings</button>
       <button id="newAlbumBtn" class="btn-plain"><i class="icon-plus icon-green"></i> New album</button>
+    </div>
+
+    <div id="settingsView" style="display:none;">
+      <div class="form-header">
+        <button id="backFromSettingsBtn" class="icon-btn"><i class="icon-back"></i></button>
+        <div class="screen-title" id="settingsHeading">General Settings</div>
+      </div>
+
+      <label id="settingsLogoLabel">Logo (PNG)</label>
+      <div class="logo-row">
+        <img id="settingsLogoPreview" class="app-logo" alt="" style="display:none;">
+        <input id="logoFileInput" type="file" accept="image/png,image/jpeg,image/svg+xml">
+      </div>
+
+      <label id="settingsCssLabel">Custom CSS</label>
+      <textarea id="customCssInput" rows="8" spellcheck="false"></textarea>
+
+      <label id="settingsTextLabel">Site wording</label>
+      <div class="meta-text" style="margin-bottom:10px;">Where you see {curly braces}, leave them in — they get swapped for real numbers.</div>
+      <div id="contentFields"></div>
+
+      <button id="saveSettingsBtn" class="btn-primary" style="margin-top:16px;">Save settings</button>
     </div>
 
     <div id="editClientView" style="display:none;">
@@ -38,6 +63,7 @@
       <label>Access token</label>
       <input id="editClientToken" type="text">
       <button id="saveClientEditBtn" class="btn-primary" style="margin-top:16px;">Save changes</button>
+      <button id="deleteClientBtn" class="btn-outline-red" style="margin-top:16px; margin-left:8px;">Delete client</button>
     </div>
 
     <div id="noClientsView" style="display:none;">
