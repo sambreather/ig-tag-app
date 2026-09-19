@@ -2,7 +2,8 @@
 // src/routes/. Structure mirrors the interactive mockups we designed.
 
 const state = {
-  password: localStorage.getItem('teamPassword') || null,
+  authHeader: localStorage.getItem('authHeader') || null,
+  isAdmin: localStorage.getItem('isAdmin') === 'true',
   clients: [],
   currentClientId: null,
   albums: [],
@@ -24,8 +25,24 @@ const state = {
 function applyContent() {
   document.title = CONTENT.pageTitle;
   document.querySelector('#screenLogin h1').textContent = CONTENT.login.heading;
+  document.getElementById('loginUsername').placeholder = CONTENT.login.usernamePlaceholder;
   document.getElementById('loginPassword').placeholder = CONTENT.login.passwordPlaceholder;
   document.getElementById('loginBtn').textContent = CONTENT.login.loginButton;
+
+  if (CONTENT.settings) {
+    document.getElementById('settingsHeading').textContent = CONTENT.settings.heading;
+    document.getElementById('settingsLogoLabel').textContent = CONTENT.settings.logoLabel;
+    document.getElementById('settingsCssLabel').textContent = CONTENT.settings.customCssLabel;
+    document.getElementById('settingsTextLabel').textContent = CONTENT.settings.textLabel;
+    document.getElementById('saveSettingsBtn').textContent = CONTENT.settings.saveButton;
+    document.getElementById('customCssInput').placeholder = CONTENT.settings.customCssPlaceholder;
+  }
+  if (CONTENT.topbar.settingsButton) {
+    document.getElementById('settingsBtn').textContent = CONTENT.topbar.settingsButton;
+  }
+  if (CONTENT.clients.deleteButton) {
+    document.getElementById('deleteClientBtn').textContent = CONTENT.clients.deleteButton;
+  }
 
   document.getElementById('deletedFilesBtn').innerHTML = `<i class="icon-trash"></i> ${CONTENT.topbar.deletedButton}`;
   document.getElementById('newAlbumBtn').innerHTML = `<i class="icon-plus icon-green"></i> ${CONTENT.topbar.newAlbumButton}`;
@@ -65,13 +82,21 @@ function applyContent() {
 }
 applyContent();
 
+// Fills {placeholders} in a wording string, e.g. fill(CONTENT.x, {count: 3}).
+// Wording is stored as plain text (not code) so it stays safely editable
+// from the admin Settings screen.
+function fill(template, values) {
+  return String(template || '').replace(/\{(\w+)\}/g, (_, key) =>
+    values[key] !== undefined ? values[key] : `{${key}}`);
+}
+
 // --- API helper ---
 async function api(path, opts = {}) {
   const res = await fetch(`/api${path}`, {
     ...opts,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${state.password}`,
+      'Authorization': state.authHeader,
       ...(opts.headers || {}),
     },
   });
@@ -87,11 +112,23 @@ function showLogin() {
 }
 document.getElementById('loginBtn').addEventListener('click', doLogin);
 document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 async function doLogin() {
-  state.password = document.getElementById('loginPassword').value;
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  state.authHeader = 'Basic ' + btoa(`${username}:${password}`);
   try {
     await api('/clients');
-    localStorage.setItem('teamPassword', state.password);
+    // Determine admin status by attempting an admin-only no-op change.
+    // A 403 means valid login but team-level access.
+    try {
+      await api('/settings', { method: 'PATCH', body: JSON.stringify({}) });
+      state.isAdmin = true;
+    } catch {
+      state.isAdmin = false;
+    }
+    localStorage.setItem('authHeader', state.authHeader);
+    localStorage.setItem('isAdmin', String(state.isAdmin));
     startApp();
   } catch {
     document.getElementById('loginError').textContent = CONTENT.login.errorIncorrect;
@@ -101,10 +138,17 @@ async function doLogin() {
 async function startApp() {
   document.getElementById('screenLogin').style.display = 'none';
   document.getElementById('screenApp').style.display = 'block';
+
+  await loadSettings();
+
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = state.isAdmin ? '' : 'none';
+  });
+
   state.clients = await api('/clients');
   const sel = document.getElementById('clientSelect');
   sel.innerHTML = state.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-  sel.addEventListener('change', () => showAlbums(sel.value));
+  sel.onchange = () => showAlbums(sel.value);
 
   if (state.clients.length) {
     document.getElementById('noClientsView').style.display = 'none';
@@ -112,9 +156,191 @@ async function startApp() {
   } else {
     document.querySelector('.topbar').style.display = 'none';
     document.getElementById('albumsView').style.display = 'none';
-    document.getElementById('noClientsView').style.display = 'block';
+    // Only an admin can actually add clients, so show a plain note otherwise.
+    document.getElementById('noClientsView').style.display = state.isAdmin ? 'block' : 'none';
+    if (!state.isAdmin) {
+      document.getElementById('albumsView').style.display = 'block';
+      document.getElementById('albumList').innerHTML = '<div class="meta-text">No clients set up yet.</div>';
+    }
   }
 }
+
+// --- Settings (wording, custom CSS, logo) ---
+async function loadSettings() {
+  try {
+    const settings = await api('/settings');
+    state.settings = settings;
+    if (settings.content) deepMerge(CONTENT, settings.content);
+    applyContent();
+    applyCustomCss(settings.customCss);
+    applyLogo(settings.logoDataUrl);
+  } catch {
+    // Fall back to the built-in defaults in content.js.
+    applyContent();
+  }
+}
+
+// Merges saved wording over the defaults, so any field added in a later
+// version still has a sensible value even if the saved copy predates it.
+function deepMerge(target, source) {
+  for (const key of Object.keys(source)) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      if (!target[key]) target[key] = {};
+      deepMerge(target[key], source[key]);
+    } else {
+      target[key] = source[key];
+    }
+  }
+  return target;
+}
+
+function applyCustomCss(css) {
+  let el = document.getElementById('customCssTag');
+  if (!el) {
+    el = document.createElement('style');
+    el.id = 'customCssTag';
+    document.head.appendChild(el);
+  }
+  el.textContent = css || '';
+}
+
+function applyLogo(dataUrl) {
+  const header = document.getElementById('appLogo');
+  const preview = document.getElementById('settingsLogoPreview');
+  if (dataUrl) {
+    header.src = dataUrl; header.style.display = 'block';
+    preview.src = dataUrl; preview.style.display = 'block';
+    let fav = document.querySelector('link[rel="icon"]');
+    if (!fav) { fav = document.createElement('link'); fav.rel = 'icon'; document.head.appendChild(fav); }
+    fav.href = dataUrl;
+  } else {
+    header.style.display = 'none';
+    preview.style.display = 'none';
+  }
+}
+
+// Turns a key like "namePlaceholder" into "Name placeholder" so the
+// settings screen reads in plain English rather than code.
+function humaniseKey(key) {
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, c => c.toUpperCase())
+    .toLowerCase()
+    .replace(/^./, c => c.toUpperCase());
+}
+
+// Builds one labelled text box per piece of wording, grouped by section.
+// Generated from the content itself, so any wording added in future
+// automatically appears here without extra work.
+function renderContentFields(content) {
+  const wrap = document.getElementById('contentFields');
+  wrap.innerHTML = '';
+
+  for (const [section, value] of Object.entries(content)) {
+    if (typeof value === 'string') {
+      wrap.appendChild(buildField([section], section, value));
+      continue;
+    }
+    const group = document.createElement('div');
+    group.className = 'content-group';
+    const title = document.createElement('div');
+    title.className = 'content-group-title';
+    title.textContent = humaniseKey(section);
+    group.appendChild(title);
+    for (const [key, text] of Object.entries(value)) {
+      if (typeof text !== 'string') continue;
+      group.appendChild(buildField([section, key], key, text));
+    }
+    wrap.appendChild(group);
+  }
+}
+
+function buildField(pathParts, key, value) {
+  const row = document.createElement('div');
+  row.className = 'content-field';
+  const label = document.createElement('label');
+  label.textContent = humaniseKey(key);
+  const input = document.createElement(value.length > 60 ? 'textarea' : 'input');
+  if (input.tagName === 'TEXTAREA') input.rows = 2;
+  else input.type = 'text';
+  input.value = value;
+  input.dataset.path = pathParts.join('.');
+  row.appendChild(label);
+  row.appendChild(input);
+  return row;
+}
+
+// Reads every generated box back into the same nested shape the app uses.
+function collectContentFields() {
+  const result = {};
+  document.querySelectorAll('#contentFields [data-path]').forEach(input => {
+    const parts = input.dataset.path.split('.');
+    if (parts.length === 1) {
+      result[parts[0]] = input.value;
+    } else {
+      if (!result[parts[0]]) result[parts[0]] = {};
+      result[parts[0]][parts[1]] = input.value;
+    }
+  });
+  return result;
+}
+
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  document.getElementById('albumsView').style.display = 'none';
+  document.querySelector('.topbar').style.display = 'none';
+  document.getElementById('settingsView').style.display = 'block';
+  document.getElementById('customCssInput').value = state.settings?.customCss || '';
+  renderContentFields(state.settings?.content || CONTENT);
+});
+document.getElementById('backFromSettingsBtn').addEventListener('click', () => {
+  document.getElementById('settingsView').style.display = 'none';
+  document.querySelector('.topbar').style.display = 'flex';
+  document.getElementById('albumsView').style.display = 'block';
+});
+
+document.getElementById('logoFileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.pendingLogoDataUrl = reader.result;
+    document.getElementById('settingsLogoPreview').src = reader.result;
+    document.getElementById('settingsLogoPreview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+  try {
+    const body = {
+      content: collectContentFields(),
+      customCss: document.getElementById('customCssInput').value,
+    };
+    if (state.pendingLogoDataUrl) body.logoDataUrl = state.pendingLogoDataUrl;
+    const saved = await api('/settings', { method: 'PATCH', body: JSON.stringify(body) });
+    state.settings = saved;
+    state.pendingLogoDataUrl = null;
+    deepMerge(CONTENT, saved.content);
+    applyContent();
+    applyCustomCss(saved.customCss);
+    applyLogo(saved.logoDataUrl);
+    showToast(CONTENT.settings?.savedToast || 'Settings saved.', null);
+  } catch {
+    showAlert('Something went wrong saving these settings. Please try again.');
+  }
+});
+
+document.getElementById('deleteClientBtn').addEventListener('click', () => {
+  showConfirm(CONTENT.clients.deleteConfirm, async () => {
+    try {
+      await api(`/clients/${state.currentClientId}`, { method: 'DELETE' });
+      document.getElementById('editClientView').style.display = 'none';
+      startApp();
+    } catch {
+      showAlert(CONTENT.clients.saveFailedWarning);
+    }
+  });
+});
 
 document.getElementById('addClientBtn').addEventListener('click', async () => {
   const name = document.getElementById('newClientName').value.trim();
@@ -279,7 +505,7 @@ document.getElementById('saveFormBtn').addEventListener('click', async () => {
   if (state.formStartDate && state.formEndDate) {
     const diffDays = (state.formEndDate - state.formStartDate) / (1000 * 60 * 60 * 24);
     if (diffDays > 3) {
-      showConfirm(CONTENT.albumForm.longCaptureWarning(Math.round(diffDays)), doSave);
+      showConfirm(fill(CONTENT.albumForm.longCaptureWarning, { days: Math.round(diffDays) }), doSave);
       return;
     }
   }
@@ -439,17 +665,17 @@ async function deleteSingle(idx) {
 
 document.getElementById('downloadStarredBtn').addEventListener('click', () => {
   const count = state.videos.filter(v => v.mark === 'save').length;
-  showConfirm(CONTENT.videos.downloadStarredConfirm(count), () => {
+  showConfirm(fill(CONTENT.videos.downloadStarredConfirm, { count }), () => {
     window.open(`/api/albums/${state.currentAlbumId}/download-starred-zip`, '_blank');
   });
 });
 document.getElementById('deleteMarkedBtn').addEventListener('click', () => {
   const marked = state.videos.filter(v => v.mark === 'delete');
-  showConfirm(CONTENT.videos.deleteMarkedConfirm(marked.length), async () => {
+  showConfirm(fill(CONTENT.videos.deleteMarkedConfirm, { count: marked.length }), async () => {
     for (const v of marked) await api(`/videos/${v.id}/delete`, { method: 'POST' });
     state.videos = state.videos.filter(v => v.mark !== 'delete');
     renderGrid();
-    showToast(CONTENT.videos.deleteMultipleToast(marked.length), null);
+    showToast(fill(CONTENT.videos.deleteMultipleToast, { count: marked.length }), null);
   });
 });
 
