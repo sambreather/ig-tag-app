@@ -9,6 +9,7 @@ router.get('/clients', (req, res) => {
 });
 
 router.post('/clients', (req, res) => {
+  if (!req.isAdmin) return res.status(403).json({ error: 'Admin access required' });
   const data = db.load();
   const client = {
     id: `c_${Date.now()}`,
@@ -22,6 +23,7 @@ router.post('/clients', (req, res) => {
 });
 
 router.patch('/clients/:clientId', (req, res) => {
+  if (!req.isAdmin) return res.status(403).json({ error: 'Admin access required' });
   const data = db.load();
   const client = data.clients.find(c => c.id === req.params.clientId);
   if (!client) return res.status(404).json({ error: 'Client not found' });
@@ -30,6 +32,20 @@ router.patch('/clients/:clientId', (req, res) => {
   if (req.body.accessToken !== undefined) client.accessToken = req.body.accessToken;
   db.save(data);
   res.json(client);
+});
+
+// Deletes a client along with its albums and video records. The underlying
+// files stay in B2 storage rather than being wiped - safer default, and
+// they can be cleaned up separately if ever needed.
+router.delete('/clients/:clientId', (req, res) => {
+  if (!req.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+  const data = db.load();
+  const { clientId } = req.params;
+  data.clients = data.clients.filter(c => c.id !== clientId);
+  data.albums = data.albums.filter(a => a.clientId !== clientId);
+  data.videos = data.videos.filter(v => v.clientId !== clientId);
+  db.save(data);
+  res.status(204).end();
 });
 
 // Overall storage usage, for the storage-usage indicator.
