@@ -22,7 +22,11 @@ const CONTENT = {
   topbar: {
     deletedButton: 'Deleted Files',
     newAlbumButton: 'New Capture',
-    settingsButton: 'Settings',
+  },
+
+  footer: {
+    settingsLink: 'Settings',
+    logoutLink: 'Log out',
   },
 
   albumList: {
