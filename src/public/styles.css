@@ -19,6 +19,12 @@ body { margin: 0; background: var(--bg); color: var(--text-primary); }
 .screen { padding: 16px; max-width: 720px; margin: 0 auto; }
 .screen.centered { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
 
+/* Default: hide both until the inline script (in index.html, runs before
+   paint) adds one of these classes to <html> based on stored login state. */
+#screenLogin, #screenApp { display: none; }
+html.is-logged-out #screenLogin { display: flex; }
+html.is-logged-in #screenApp { display: block; }
+
 .login-card { background: var(--surface-1); border-radius: 14px; padding: 32px; width: 280px; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
 .login-card h1 { font-size: 18px; margin-bottom: 20px; }
 .login-card input { width: 100%; margin-bottom: 12px; }
@@ -43,7 +49,7 @@ label { font-size: 12px; color: var(--text-secondary); display: block; margin: 1
 .content-field input, .content-field textarea { width: 100%; font-size: 12px; font-family: inherit; }
 
 .app-logo { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
-.app-footer { text-align: center; padding: 20px 0 12px; }
+.app-footer { text-align: center; padding: 20px 0 12px; display: flex; justify-content: center; gap: 16px; }
 .footer-link { font-size: 11px; color: var(--text-muted); cursor: pointer; text-decoration: underline; }
 .footer-link:hover { color: var(--text-secondary); }
 .logo-row { display: flex; align-items: center; gap: 12px; }
@@ -56,6 +62,7 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 .field-btn { width: 100%; text-align: left; }
 
 .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 10px; flex-wrap: wrap; }
+.topbar-left { display: flex; align-items: center; gap: 6px; }
 .topbar-actions { display: flex; gap: 8px; }
 
 .album-list { display: flex; flex-direction: column; gap: 10px; }
