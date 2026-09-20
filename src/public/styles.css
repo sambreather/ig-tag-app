@@ -43,6 +43,9 @@ label { font-size: 12px; color: var(--text-secondary); display: block; margin: 1
 .content-field input, .content-field textarea { width: 100%; font-size: 12px; font-family: inherit; }
 
 .app-logo { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.app-footer { text-align: center; padding: 20px 0 12px; }
+.footer-link { font-size: 11px; color: var(--text-muted); cursor: pointer; text-decoration: underline; }
+.footer-link:hover { color: var(--text-secondary); }
 .logo-row { display: flex; align-items: center; gap: 12px; }
 textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface-1); color: var(--text-primary); resize: vertical; }
 .btn-secondary { background: var(--surface-1); }
