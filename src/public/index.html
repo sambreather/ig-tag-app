@@ -8,6 +8,12 @@
 </head>
 <body>
 
+  <!-- Decide login vs app BEFORE either screen paints, so there's no flash
+       of the login box on refresh when already logged in. -->
+  <script>
+    document.documentElement.classList.add(localStorage.getItem('authHeader') ? 'is-logged-in' : 'is-logged-out');
+  </script>
+
   <!-- Login screen -->
   <div id="screenLogin" class="screen centered">
     <div class="login-card">
@@ -20,12 +26,13 @@
   </div>
 
   <!-- Main app -->
-  <div id="screenApp" class="screen" style="display:none;">
+  <div id="screenApp" class="screen">
     <div class="topbar">
-      <img id="appLogo" class="app-logo" alt="" style="display:none;">
-      <select id="clientSelect"></select>
-      <button id="editClientBtn" class="icon-btn admin-only" aria-label="Edit client details"><i class="icon-settings"></i></button>
-      <button id="settingsBtn" class="btn-plain admin-only">Settings</button>
+      <div class="topbar-left">
+        <img id="appLogo" class="app-logo" alt="" style="display:none;">
+        <select id="clientSelect"></select>
+        <button id="editClientBtn" class="icon-btn admin-only" aria-label="Edit client details"><i class="icon-settings"></i></button>
+      </div>
       <button id="newAlbumBtn" class="btn-plain"><i class="icon-plus icon-green"></i> New album</button>
     </div>
 
@@ -139,6 +146,7 @@
     </div>
 
     <div class="app-footer">
+      <span id="settingsLink" class="footer-link admin-only">Settings</span>
       <span id="logoutLink" class="footer-link">Log out</span>
     </div>
   </div>
