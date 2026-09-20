@@ -105,6 +105,17 @@ async function api(path, opts = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+document.getElementById('logoutLink').addEventListener('click', () => {
+  localStorage.removeItem('authHeader');
+  localStorage.removeItem('isAdmin');
+  state.authHeader = null;
+  state.isAdmin = false;
+  document.getElementById('loginUsername').value = '';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginError').textContent = '';
+  showLogin();
+});
+
 // --- Login ---
 function showLogin() {
   document.getElementById('screenLogin').style.display = 'flex';
@@ -324,6 +335,10 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
     applyContent();
     applyCustomCss(saved.customCss);
     applyLogo(saved.logoDataUrl);
+
+    document.getElementById('settingsView').style.display = 'none';
+    document.querySelector('.topbar').style.display = 'flex';
+    showAlbums(state.currentClientId);
     showToast(CONTENT.settings?.savedToast || 'Settings saved.', null);
   } catch {
     showAlert('Something went wrong saving these settings. Please try again.');
