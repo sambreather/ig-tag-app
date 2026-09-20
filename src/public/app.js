@@ -37,8 +37,9 @@ function applyContent() {
     document.getElementById('saveSettingsBtn').textContent = CONTENT.settings.saveButton;
     document.getElementById('customCssInput').placeholder = CONTENT.settings.customCssPlaceholder;
   }
-  if (CONTENT.topbar.settingsButton) {
-    document.getElementById('settingsBtn').textContent = CONTENT.topbar.settingsButton;
+  if (CONTENT.footer) {
+    document.getElementById('settingsLink').textContent = CONTENT.footer.settingsLink;
+    document.getElementById('logoutLink').textContent = CONTENT.footer.logoutLink;
   }
   if (CONTENT.clients.deleteButton) {
     document.getElementById('deleteClientBtn').textContent = CONTENT.clients.deleteButton;
@@ -162,17 +163,13 @@ async function startApp() {
   sel.onchange = () => showAlbums(sel.value);
 
   if (state.clients.length) {
-    document.getElementById('noClientsView').style.display = 'none';
     showAlbums(state.clients[0].id);
+  } else if (state.isAdmin) {
+    // Only an admin can actually add clients, so show the add-client screen.
+    showScreen('noClientsView');
   } else {
-    document.querySelector('.topbar').style.display = 'none';
-    document.getElementById('albumsView').style.display = 'none';
-    // Only an admin can actually add clients, so show a plain note otherwise.
-    document.getElementById('noClientsView').style.display = state.isAdmin ? 'block' : 'none';
-    if (!state.isAdmin) {
-      document.getElementById('albumsView').style.display = 'block';
-      document.getElementById('albumList').innerHTML = '<div class="meta-text">No clients set up yet.</div>';
-    }
+    showScreen('albumsView');
+    document.getElementById('albumList').innerHTML = '<div class="meta-text">No clients set up yet.</div>';
   }
 }
 
@@ -296,18 +293,12 @@ function collectContentFields() {
   return result;
 }
 
-document.getElementById('settingsBtn').addEventListener('click', () => {
-  document.getElementById('albumsView').style.display = 'none';
-  document.querySelector('.topbar').style.display = 'none';
-  document.getElementById('settingsView').style.display = 'block';
+document.getElementById('settingsLink').addEventListener('click', () => {
+  showScreen('settingsView');
   document.getElementById('customCssInput').value = state.settings?.customCss || '';
   renderContentFields(state.settings?.content || CONTENT);
 });
-document.getElementById('backFromSettingsBtn').addEventListener('click', () => {
-  document.getElementById('settingsView').style.display = 'none';
-  document.querySelector('.topbar').style.display = 'flex';
-  document.getElementById('albumsView').style.display = 'block';
-});
+document.getElementById('backFromSettingsBtn').addEventListener('click', () => showScreen('albumsView'));
 
 document.getElementById('logoFileInput').addEventListener('change', e => {
   const file = e.target.files[0];
@@ -336,8 +327,6 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
     applyCustomCss(saved.customCss);
     applyLogo(saved.logoDataUrl);
 
-    document.getElementById('settingsView').style.display = 'none';
-    document.querySelector('.topbar').style.display = 'flex';
     showAlbums(state.currentClientId);
     showToast(CONTENT.settings?.savedToast || 'Settings saved.', null);
   } catch {
@@ -349,7 +338,6 @@ document.getElementById('deleteClientBtn').addEventListener('click', () => {
   showConfirm(CONTENT.clients.deleteConfirm, async () => {
     try {
       await api(`/clients/${state.currentClientId}`, { method: 'DELETE' });
-      document.getElementById('editClientView').style.display = 'none';
       startApp();
     } catch {
       showAlert(CONTENT.clients.saveFailedWarning);
@@ -378,13 +366,9 @@ document.getElementById('editClientBtn').addEventListener('click', () => {
   document.getElementById('editClientName').value = client.name || '';
   document.getElementById('editClientIgId').value = client.igUserId || '';
   document.getElementById('editClientToken').value = client.accessToken || '';
-  document.getElementById('albumsView').style.display = 'none';
-  document.getElementById('editClientView').style.display = 'block';
+  showScreen('editClientView');
 });
-document.getElementById('backFromEditClientBtn').addEventListener('click', () => {
-  document.getElementById('editClientView').style.display = 'none';
-  document.getElementById('albumsView').style.display = 'block';
-});
+document.getElementById('backFromEditClientBtn').addEventListener('click', () => showScreen('albumsView'));
 document.getElementById('saveClientEditBtn').addEventListener('click', async () => {
   const name = document.getElementById('editClientName').value.trim();
   if (!name) { showAlert(CONTENT.clients.missingNameWarning); return; }
@@ -397,7 +381,6 @@ document.getElementById('saveClientEditBtn').addEventListener('click', async () 
         accessToken: document.getElementById('editClientToken').value.trim(),
       }),
     });
-    document.getElementById('editClientView').style.display = 'none';
     startApp();
   } catch (err) {
     showAlert(CONTENT.clients.saveFailedWarning);
@@ -405,9 +388,15 @@ document.getElementById('saveClientEditBtn').addEventListener('click', async () 
 });
 
 // --- Screens ---
+// Every top-level screen in the app is listed here. Whichever navigation
+// action runs, this is the ONLY thing that should decide what's visible -
+// that guarantees exactly one screen shows at a time, with nothing left
+// stacked underneath from an earlier click.
+const ALL_SCREENS = ['albumsView', 'albumFormView', 'videosView', 'deletedView', 'editClientView', 'settingsView', 'noClientsView'];
 function showScreen(id) {
-  ['albumsView', 'albumFormView', 'videosView', 'deletedView'].forEach(s => {
-    document.getElementById(s).style.display = (s === id) ? 'block' : 'none';
+  ALL_SCREENS.forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.style.display = (s === id) ? 'block' : 'none';
   });
   document.querySelector('.topbar').style.display = (id === 'albumsView') ? 'flex' : 'none';
 }
