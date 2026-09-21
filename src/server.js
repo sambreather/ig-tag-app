@@ -15,6 +15,7 @@ const videosRouter = require('./routes/videos');
 const settingsRouter = require('./routes/settings');
 const webhookRouter = require('./routes/webhook');
 const { pollActiveAlbums } = require('./services/capture');
+const db = require('./services/db');
 
 const app = express();
 // Logo uploads arrive as base64 data URLs, so allow a larger body than the
@@ -29,6 +30,14 @@ app.use(express.json({
 // directly. It's verified by its own signature check instead - see
 // routes/webhook.js. Mounted before the /api auth middleware deliberately.
 app.use('/', webhookRouter);
+
+// The login page needs the logo before anyone has actually logged in, so
+// this one small piece of settings is deliberately public - nothing else
+// (wording, custom CSS, client data) is exposed here.
+app.get('/public-logo', (req, res) => {
+  const data = db.load();
+  res.json({ logoDataUrl: data.settings.logoDataUrl || '' });
+});
 
 // Serve the frontend files (index.html, styles.css, app.js) with no login
 // required - the login check below only protects the /api routes, so the
