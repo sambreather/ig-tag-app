@@ -27,6 +27,7 @@ html.is-logged-in #screenApp { display: block; }
 
 .login-card { background: var(--surface-1); border-radius: 14px; padding: 32px; width: 280px; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
 .login-card h1 { font-size: 18px; margin-bottom: 20px; }
+.login-logo { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; margin-bottom: 16px; }
 .login-card input { width: 100%; margin-bottom: 12px; }
 .error-text { color: var(--red); font-size: 12px; margin-top: 8px; }
 
@@ -40,7 +41,7 @@ label { font-size: 12px; color: var(--text-secondary); display: block; margin: 1
 .btn-primary { background: var(--text-primary); color: var(--surface-1); border: none; }
 .btn-primary:hover { opacity: 0.9; background: var(--text-primary); }
 .btn-plain { background: var(--surface-1); color: var(--text-primary); }
-.icon-green::before { color: var(--green); }
+.icon-green { color: var(--green); }
 .deleted-btn-row { display: flex; justify-content: flex-end; margin-top: 16px; }
 #formName { width: 50%; min-width: 220px; }
 
@@ -132,17 +133,9 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 
 /* Placeholder icons using simple characters - swap for a real icon set
    (e.g. Lucide, Tabler) once the app is deployed and we're polishing visuals. */
-[class^="icon-"] { font-style: normal; }
-.icon-trash::before { content: "\1F5D1"; }
-.icon-plus::before { content: "+"; font-weight: bold; }
-.icon-back::before { content: "\2190"; }
-.icon-download::before { content: "\2B07"; }
-.icon-star::before { content: "\2605"; }
-.icon-x::before { content: "\2715"; }
-.icon-chevron-left::before { content: "\2039"; }
-.icon-chevron-right::before { content: "\203A"; }
-.icon-play::before { content: "\25B6"; font-size: 18px; color: var(--text-muted); }
-.icon-settings::before { content: "\2699"; }
-.icon-grid::before { content: "\229E"; }
-.icon-grid-large::before { content: "\25A3"; }
-button.active .icon-star::before { color: var(--green); }
+/* Icons are real inline SVGs (see ICONS in app.js), using currentColor so
+   they inherit their element's text color automatically. */
+i[class*="icon-"] { display: inline-flex; align-items: center; }
+i[class*="icon-"] svg { display: block; }
+.icon-play svg { color: var(--text-muted); }
+button.active .icon-star { color: var(--green); }
