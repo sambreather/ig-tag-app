@@ -39,6 +39,12 @@ app.get('/public-logo', (req, res) => {
   res.json({ logoDataUrl: data.settings.logoDataUrl || '' });
 });
 
+// Meta requires public Privacy Policy and Data Deletion pages to publish the
+// app. These are deliberately open to everyone (Meta's reviewers have no
+// login) and contain no data - just static text.
+app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'public', 'privacy.html')));
+app.get('/data-deletion', (req, res) => res.sendFile(path.join(__dirname, 'public', 'data-deletion.html')));
+
 // Serve the frontend files (index.html, styles.css, app.js) with no login
 // required - the login check below only protects the /api routes, so the
 // login page itself is always reachable.
