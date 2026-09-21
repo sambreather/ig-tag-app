@@ -673,7 +673,10 @@ function renderGrid() {
   grid.innerHTML = state.videos.map((v, idx) => `
     <div class="video-card ${v.mark || ''}">
       <div class="thumb" data-idx="${idx}">
-        <i class="icon-play"></i>
+        ${v.previewUrl ? (v.type === 'photo'
+          ? `<img class="thumb-media" src="${v.previewUrl}" loading="lazy" alt="">`
+          : `<video class="thumb-media" src="${v.previewUrl}#t=0.1" preload="metadata" muted playsinline></video>`) : ''}
+        ${v.type === 'photo' ? '' : '<i class="icon-play"></i>'}
         <div class="tag-label">@${v.tagger}</div>
       </div>
       <div class="card-footer">

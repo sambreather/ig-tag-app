@@ -8,7 +8,10 @@ const archiver = require('archiver');
 router.get('/albums/:albumId/videos', (req, res) => {
   const data = db.load();
   const videos = data.videos.filter(v => v.albumId === req.params.albumId && !v.deleted);
-  res.json(videos);
+  // Each item gets a temporary (1 hour) link so the grid can show a real
+  // preview picture instead of a placeholder. Not stored - made fresh each time.
+  const withPreviews = videos.map(v => ({ ...v, previewUrl: storage.getSignedDownloadUrl(v.storageKey, 3600) }));
+  res.json(withPreviews);
 });
 
 // Toggle a video's mark (save/delete/null) - used by the star button and Review Mode.
