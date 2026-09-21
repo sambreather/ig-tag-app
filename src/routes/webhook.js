@@ -81,6 +81,30 @@ router.post('/webhook', async (req, res) => {
   }
 });
 
+// Checks, in order: the Content-Type header, the file's first bytes, then the
+// URL. Defaults to video only if all three give no answer.
+function detectMediaType(buffer, headerType, url) {
+  const header = (headerType || '').split(';')[0].trim().toLowerCase();
+  const image = (contentType, ext) => ({ type: 'photo', ext, contentType });
+  const video = () => ({ type: 'video', ext: 'mp4', contentType: 'video/mp4' });
+
+  if (header === 'image/png') return image(header, 'png');
+  if (header === 'image/webp') return image(header, 'webp');
+  if (header.startsWith('image/')) return image('image/jpeg', 'jpg');
+  if (header.startsWith('video/')) return video();
+
+  if (buffer.length > 12) {
+    if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return image('image/jpeg', 'jpg');
+    if (buffer.toString('latin1', 1, 4) === 'PNG') return image('image/png', 'png');
+    if (buffer.toString('latin1', 0, 4) === 'RIFF' && buffer.toString('latin1', 8, 12) === 'WEBP') return image('image/webp', 'webp');
+    if (buffer.toString('latin1', 4, 8) === 'ftyp') return video();
+  }
+
+  if (/\.(jpg|jpeg)(\?|$)/i.test(url)) return image('image/jpeg', 'jpg');
+  if (/\.png(\?|$)/i.test(url)) return image('image/png', 'png');
+  return video();
+}
+
 async function handleStoryMention({ igUserId, mediaUrl, senderId, messageId, timestamp }) {
   if (!mediaUrl) return;
 
@@ -107,12 +131,11 @@ async function handleStoryMention({ igUserId, mediaUrl, senderId, messageId, tim
   if (data.videos.some(v => v.sourceMediaId === messageId)) return;
 
   // Story mention media URLs are ephemeral, so download straight away.
-  const buffer = await instagram.downloadMediaFile(mediaUrl);
+  const { buffer, contentType: sentType } = await instagram.downloadMedia(mediaUrl);
 
-  // Work out the file type from the URL, defaulting to video.
-  const isImage = /\.(jpg|jpeg|png)(\?|$)/i.test(mediaUrl);
-  const type = isImage ? 'photo' : 'video';
-  const ext = isImage ? 'jpg' : 'mp4';
+  // Work out photo vs video from what the server actually sent, not the URL
+  // (Instagram's media URLs often have no file extension).
+  const { type, ext, contentType } = detectMediaType(buffer, sentType, mediaUrl);
 
   // Look up who mentioned us, so the file can credit them properly.
   let taggerUsername = senderId;
@@ -130,7 +153,7 @@ async function handleStoryMention({ igUserId, mediaUrl, senderId, messageId, tim
     albumId: album.id,
     filename,
     buffer,
-    contentType: isImage ? 'image/jpeg' : 'video/mp4',
+    contentType,
   });
 
   // Re-load before saving, in case another event landed while downloading.

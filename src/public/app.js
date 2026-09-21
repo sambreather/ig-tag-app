@@ -761,7 +761,15 @@ function renderPreview() {
   document.getElementById('previewTagger').textContent = `@${v.tagger}`;
   document.getElementById('previewStarBtn').classList.toggle('active', v.mark === 'save');
   document.getElementById('previewCard').className = 'modal-card ' + (v.mark || '');
-  api(`/videos/${v.id}/download-url`).then(({ url }) => { document.getElementById('previewVideoEl').src = url; });
+  const videoEl = document.getElementById('previewVideoEl');
+  const imageEl = document.getElementById('previewImageEl');
+  const isPhoto = v.type === 'photo';
+  videoEl.style.display = isPhoto ? 'none' : '';
+  imageEl.style.display = isPhoto ? '' : 'none';
+  videoEl.pause();
+  api(`/videos/${v.id}/download-url`).then(({ url }) => {
+    if (isPhoto) imageEl.src = url; else videoEl.src = url;
+  });
 }
 function navPreview(dir) {
   if (state.previewMode !== 'grid') return;
@@ -802,9 +810,9 @@ document.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if (e.key === 'ArrowDown') { e.preventDefault(); navPreview('next'); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); navPreview('prev'); }
-  else if (e.key === ' ') { e.preventDefault(); video.paused ? video.play() : video.pause(); }
-  else if (e.key === 'ArrowLeft') { video.currentTime = Math.max(0, video.currentTime - 5); }
-  else if (e.key === 'ArrowRight') { video.currentTime += 5; }
+  else if (e.key === ' ') { e.preventDefault(); if (video.style.display !== 'none') video.paused ? video.play() : video.pause(); }
+  else if (e.key === 'ArrowLeft') { if (video.style.display !== 'none') video.currentTime = Math.max(0, video.currentTime - 5); }
+  else if (e.key === 'ArrowRight') { if (video.style.display !== 'none') video.currentTime += 5; }
   else if (k === 's') markCurrentAndAdvance('save');
   else if (k === 'd') markCurrentAndAdvance('delete');
 });
