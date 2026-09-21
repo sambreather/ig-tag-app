@@ -381,7 +381,8 @@ document.getElementById('saveClientEditBtn').addEventListener('click', async () 
         accessToken: document.getElementById('editClientToken').value.trim(),
       }),
     });
-    startApp();
+    await startApp();
+    showToast(CONTENT.clients.savedToast, null);
   } catch (err) {
     showAlert(CONTENT.clients.saveFailedWarning);
   }
@@ -465,7 +466,10 @@ function openAlbumForm(albumId) {
   state.formEndDate = album && album.end ? new Date(album.end) : null;
   state.formStartIsNow = false;
 
-  const startLocked = album && album.status === 'capturing';
+  // Start is locked once the capture has actually begun - whether it's
+  // still running or already finished. Only a truly untouched, still
+  // "scheduled" capture has an editable start time.
+  const startLocked = album && album.status !== 'scheduled';
   const endLocked = album && album.status === 'done';
   document.getElementById('formStartField').textContent = state.formStartVal || CONTENT.albumForm.startPlaceholder;
   document.getElementById('formEndField').textContent = state.formEndVal || CONTENT.albumForm.endPlaceholder;
@@ -504,6 +508,7 @@ document.getElementById('saveFormBtn').addEventListener('click', async () => {
     if (albumId) await api(`/albums/${albumId}`, { method: 'PATCH', body: JSON.stringify(body) });
     else await api(`/clients/${clientId}/albums`, { method: 'POST', body: JSON.stringify(body) });
     showAlbums(clientId);
+    showToast(CONTENT.albumForm.savedToast, null);
   };
 
   if (state.formStartDate && state.formEndDate) {
