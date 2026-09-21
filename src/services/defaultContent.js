@@ -45,6 +45,7 @@ module.exports = {
     missingDatesWarning: 'Please select both a start and end time before saving.',
     missingNameWarning: 'Please enter a name for this capture before saving.',
     endBeforeStartWarning: 'The end date/time must be after the start date/time.',
+    savedToast: 'Capture saved.',
   },
   clients: {
     addFirstClientHeading: 'Add your first client',
@@ -62,6 +63,7 @@ module.exports = {
     missingNameWarning: 'Please enter a client name.',
     saveFailedWarning: 'Something went wrong saving these changes. Please try again.',
     addFailedWarning: 'Something went wrong adding this client. Please try again.',
+    savedToast: 'Client saved.',
   },
   picker: { timeLabel: 'Time', cancelButton: 'Cancel', doneButton: 'Done' },
   videos: {
