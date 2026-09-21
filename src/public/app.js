@@ -1,6 +1,54 @@
 // app.js — the real frontend, talking to the actual API routes built in
 // src/routes/. Structure mirrors the interactive mockups we designed.
 
+// --- Icons ---
+// Clean inline SVG icons (no external font/CDN dependency), matching the
+// line-icon style used in the original interactive mockups. Each uses
+// stroke="currentColor" so it automatically picks up the button/element's
+// text color - including hover, active, and disabled states already
+// defined in styles.css, with no extra CSS needed per icon.
+const ICONS = {
+  back: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  'chevron-left': '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  'chevron-right': '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>',
+  download: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>',
+  star: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 16.9 5.8 20.3l1.6-6.8L2.2 8.9l6.9-.6L12 2z"/></svg>',
+  x: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z"/></svg>',
+  play: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></svg>',
+  grid: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+  'grid-large': '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="18" rx="1"/><rect x="13" y="3" width="8" height="18" rx="1"/></svg>',
+};
+
+// Finds every <i class="icon-xxx"> inside the given root (or the whole
+// page by default) and swaps in the real SVG. Called once on load, and
+// again after anything that inserts new icon markup dynamically (the
+// album list, the video grid, etc.), so icons are always real rather
+// than left as bare text placeholders.
+function renderIcons(root) {
+  (root || document).querySelectorAll('i[class*="icon-"]').forEach(el => {
+    const name = [...el.classList].find(c => c.startsWith('icon-') && c !== 'icon-btn' && c !== 'icon-green' && ICONS[c.slice(5)]);
+    if (name) el.innerHTML = ICONS[name.slice(5)];
+  });
+}
+renderIcons(); // covers every icon already sitting in the static HTML
+
+// The login screen shows the logo if one's set, falling back to the text
+// heading otherwise. This runs immediately, before any login happens.
+fetch('/public-logo').then(r => r.json()).then(({ logoDataUrl }) => {
+  if (logoDataUrl) {
+    document.getElementById('loginLogo').src = logoDataUrl;
+    document.getElementById('loginLogo').style.display = 'block';
+    document.getElementById('loginHeading').style.display = 'none';
+
+    let fav = document.querySelector('link[rel="icon"]');
+    if (!fav) { fav = document.createElement('link'); fav.rel = 'icon'; document.head.appendChild(fav); }
+    fav.href = logoDataUrl;
+  }
+}).catch(() => {}); // no logo set yet, or offline - the text heading stays as the fallback
+
 const state = {
   authHeader: localStorage.getItem('authHeader') || null,
   isAdmin: localStorage.getItem('isAdmin') === 'true',
@@ -80,6 +128,7 @@ function applyContent() {
   document.querySelectorAll('#editClientView label')[0].textContent = CONTENT.clients.nameLabel;
   document.querySelectorAll('#editClientView label')[1].textContent = CONTENT.clients.igIdLabel;
   document.querySelectorAll('#editClientView label')[2].textContent = CONTENT.clients.tokenLabel;
+  renderIcons();
 }
 applyContent();
 
@@ -437,6 +486,7 @@ function renderAlbumList() {
   list.querySelectorAll('[data-open]').forEach(el => el.addEventListener('click', () => openAlbum(el.dataset.open)));
   list.querySelectorAll('[data-settings]').forEach(el => el.addEventListener('click', () => openAlbumForm(el.dataset.settings)));
   list.querySelectorAll('[data-delalbum]').forEach(el => el.addEventListener('click', () => deleteAlbum(el.dataset.delalbum)));
+  renderIcons(list);
 }
 
 function fmtShort(iso) {
@@ -601,6 +651,7 @@ document.getElementById('sortSelect').addEventListener('change', e => { sortVide
 document.getElementById('sizeToggle').addEventListener('click', () => {
   state.gridSize = state.gridSize === 'small' ? 'large' : 'small';
   document.getElementById('sizeToggle').innerHTML = state.gridSize === 'small' ? '<i class="icon-grid-large"></i>' : '<i class="icon-grid"></i>';
+  renderIcons(document.getElementById('sizeToggle'));
   renderGrid();
 });
 
@@ -645,6 +696,7 @@ function renderGrid() {
     window.open(url, '_blank');
   }));
   updateActionButtons();
+  renderIcons(grid);
 }
 
 function updateActionButtons() {
