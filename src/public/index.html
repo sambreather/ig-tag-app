@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tag Capture</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+  <!-- Decide login vs app BEFORE either screen paints, so there's no flash
+       of the login box on refresh when already logged in. -->
+  <script>
+    document.documentElement.classList.add(localStorage.getItem('authHeader') ? 'is-logged-in' : 'is-logged-out');
+  </script>
+
+  <!-- Login screen -->
+  <div id="screenLogin" class="screen centered">
+    <div class="login-card">
+      <img id="loginLogo" class="login-logo" alt="" style="display:none;">
+      <h1 id="loginHeading">Tag Capture</h1>
+      <input id="loginUsername" type="text" placeholder="Username">
+      <input id="loginPassword" type="password" placeholder="Password">
+      <button id="loginBtn" class="btn-primary">Log in</button>
+      <div id="loginError" class="error-text"></div>
+    </div>
+  </div>
+
+  <!-- Main app -->
+  <div id="screenApp" class="screen">
+    <div class="topbar">
+      <div class="topbar-left">
+        <img id="appLogo" class="app-logo" alt="" style="display:none;">
+        <select id="clientSelect"></select>
+        <button id="editClientBtn" class="icon-btn admin-only" aria-label="Edit client details"><i class="icon-settings"></i></button>
+      </div>
+      <button id="newAlbumBtn" class="btn-plain"><i class="icon-plus icon-green"></i> New album</button>
+    </div>
+
+    <div id="settingsView" style="display:none;">
+      <div class="form-header">
+        <button id="backFromSettingsBtn" class="icon-btn"><i class="icon-back"></i></button>
+        <div class="screen-title" id="settingsHeading">General Settings</div>
+      </div>
+
+      <label id="settingsLogoLabel">Logo (PNG)</label>
+      <div class="logo-row">
+        <img id="settingsLogoPreview" class="app-logo" alt="" style="display:none;">
+        <input id="logoFileInput" type="file" accept="image/png,image/jpeg,image/svg+xml">
+      </div>
+
+      <label id="settingsCssLabel">Custom CSS</label>
+      <textarea id="customCssInput" rows="8" spellcheck="false"></textarea>
+
+      <label id="settingsTextLabel">Site wording</label>
+      <div class="meta-text" style="margin-bottom:10px;">Where you see {curly braces}, leave them in — they get swapped for real numbers.</div>
+      <div id="contentFields"></div>
+
+      <button id="saveSettingsBtn" class="btn-primary" style="margin-top:16px;">Save settings</button>
+    </div>
+
+    <div id="editClientView" style="display:none;">
+      <div class="form-header">
+        <button id="backFromEditClientBtn" class="icon-btn"><i class="icon-back"></i></button>
+        <div class="screen-title">Edit client</div>
+      </div>
+      <label>Client name</label>
+      <input id="editClientName" type="text">
+      <label>Instagram Business account ID</label>
+      <input id="editClientIgId" type="text">
+      <label>Access token</label>
+      <input id="editClientToken" type="text">
+      <button id="saveClientEditBtn" class="btn-primary" style="margin-top:16px;">Save changes</button>
+      <button id="deleteClientBtn" class="btn-outline-red" style="margin-top:16px; margin-left:8px;">Delete client</button>
+    </div>
+
+    <div id="noClientsView" style="display:none;">
+      <div class="screen-title" style="margin-bottom:14px;">Add your first client</div>
+      <label>Client name</label>
+      <input id="newClientName" type="text" placeholder="e.g. Olivia Dean">
+      <label>Instagram Business account ID</label>
+      <input id="newClientIgId" type="text" placeholder="From Meta's dashboard">
+      <label>Access token</label>
+      <input id="newClientToken" type="text" placeholder="Generated in Meta's developer dashboard">
+      <button id="addClientBtn" class="btn-primary" style="margin-top:16px;">Add client</button>
+    </div>
+
+    <div id="albumsView">
+      <div id="albumList" class="album-list"></div>
+      <div class="deleted-btn-row">
+        <button id="deletedFilesBtn" class="btn-plain"><i class="icon-trash"></i> Deleted</button>
+      </div>
+    </div>
+
+    <div id="albumFormView" style="display:none;">
+      <div class="form-header">
+        <button id="backFromFormBtn" class="icon-btn"><i class="icon-back"></i></button>
+        <div id="formTitle" class="screen-title"></div>
+      </div>
+      <label>Name</label>
+      <input id="formName" type="text" placeholder="e.g. Governors Ball">
+      <label>Start</label>
+      <button id="formStartField" class="field-btn"></button>
+      <div id="formStartLockedNote" class="locked-note" style="display:none;">Already started — locked.</div>
+      <label>End</label>
+      <button id="formEndField" class="field-btn"></button>
+      <div id="formEndLockedNote" class="locked-note" style="display:none;">Already ended — locked.</div>
+      <button id="saveFormBtn" class="btn-primary" style="margin-top:16px;"></button>
+    </div>
+
+    <div id="videosView" style="display:none;">
+      <div class="form-header">
+        <button id="backBtn" class="icon-btn"><i class="icon-back"></i></button>
+        <div>
+          <div id="albumTitle" class="screen-title"></div>
+          <div id="albumMeta" class="meta-text"></div>
+        </div>
+      </div>
+      <div class="video-toolbar">
+        <div class="toolbar-left">
+          <button id="downloadStarredBtn" class="btn-outline-green" style="display:none;"><i class="icon-download"></i> <span id="starredCount"></span></button>
+          <button id="deleteMarkedBtn" class="btn-outline-red" style="display:none;"><i class="icon-trash"></i> <span id="markedCount"></span></button>
+        </div>
+        <div class="toolbar-right">
+          <select id="sortSelect">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="az">Alphabetical</option>
+          </select>
+          <button id="sizeToggle" class="icon-btn"><i class="icon-grid"></i></button>
+        </div>
+      </div>
+      <div id="gridContainer" class="grid-container">
+        <div id="videoGrid" class="video-grid"></div>
+      </div>
+    </div>
+
+    <div id="deletedView" style="display:none;">
+      <div class="form-header">
+        <button id="backFromDeletedBtn" class="icon-btn"><i class="icon-back"></i></button>
+        <div>
+          <div id="deletedClientTitle" class="screen-title"></div>
+          <div class="meta-text">Kept 30 days, then permanently removed</div>
+        </div>
+      </div>
+      <div id="deletedGroups"></div>
+    </div>
+
+    <div class="app-footer">
+      <span id="settingsLink" class="footer-link admin-only">Settings</span>
+      <span id="logoutLink" class="footer-link">Log out</span>
+    </div>
+  </div>
+
+  <!-- Unified video preview / review modal -->
+  <div id="previewModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" id="previewCard">
+      <div class="modal-card-header">
+        <div id="previewCounter" class="meta-text"></div>
+        <div id="previewTagger" class="meta-text"></div>
+        <button id="closePreview" class="icon-btn"><i class="icon-x"></i></button>
+      </div>
+      <video id="previewVideoEl" class="preview-video" playsinline></video>
+      <div class="modal-card-controls">
+        <button id="prevArrow" class="icon-btn"><i class="icon-chevron-left"></i></button>
+        <div id="previewActionsNormal" class="modal-actions">
+          <button id="previewDlBtn" class="icon-btn"><i class="icon-download"></i></button>
+          <button id="previewStarBtn" class="icon-btn"><i class="icon-star"></i></button>
+          <button id="previewTrashBtn" class="icon-btn"><i class="icon-trash"></i></button>
+        </div>
+        <div id="previewActionsDeleted" class="modal-actions" style="display:none;">
+          <button id="previewRestoreBtn" class="btn-small">Restore</button>
+        </div>
+        <button id="nextArrow" class="icon-btn"><i class="icon-chevron-right"></i></button>
+      </div>
+      <div id="previewHintRow" class="hint-row">Space play/pause · ←→ scrub 5s · ↑↓ prev/next · S save · D delete</div>
+    </div>
+  </div>
+
+  <!-- Date/time picker popup -->
+  <div id="pickerModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card small">
+      <div id="pickerNowLink" class="now-link" style="display:none;">Start Capturing Now</div>
+      <div class="cal-nav">
+        <button id="calPrev" class="icon-btn"><i class="icon-chevron-left"></i></button>
+        <div id="calMonthLabel" class="meta-text bold"></div>
+        <button id="calNext" class="icon-btn"><i class="icon-chevron-right"></i></button>
+      </div>
+      <div id="calGrid" class="cal-grid"></div>
+      <label>Time</label>
+      <select id="timeSelect"></select>
+      <div class="modal-buttons">
+        <button id="pickerCancel" class="btn-secondary">Cancel</button>
+        <button id="pickerDone" class="btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Simple alert popup (single OK button, for validation errors) -->
+  <div id="alertModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card small centered-text">
+      <div id="alertText"></div>
+      <div class="modal-buttons">
+        <button id="alertOkBtn" class="btn-primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation popup -->
+  <div id="confirmModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card small centered-text">
+      <div id="confirmText"></div>
+      <div class="modal-buttons">
+        <button id="confirmCancelBtn" class="btn-secondary">Cancel</button>
+        <button id="confirmYesBtn" class="btn-primary">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastHolder"></div>
+
+  <script src="/content.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
