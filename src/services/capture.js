@@ -53,7 +53,7 @@ async function pollActiveAlbums() {
     const newVideos = [];
 
     for (const album of data.albums) {
-      if (album.status !== 'capturing') continue;
+      if (album.status !== 'capturing' || album.deleted) continue;
 
       if (album.end && new Date(album.end) <= now) {
         endedAlbumIds.push(album.id);

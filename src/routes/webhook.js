@@ -120,6 +120,7 @@ async function handleStoryMention({ igUserId, mediaUrl, senderId, messageId, tim
   const album = data.albums.find(a =>
     a.clientId === client.id &&
     a.status === 'capturing' &&
+    !a.deleted &&
     (!a.end || new Date(a.end) > now)
   );
   if (!album) {
