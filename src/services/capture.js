@@ -1,10 +1,14 @@
 // capture.js
-// The core scheduled job: for every album currently "capturing", check its
-// client's Instagram account for new mentions, and download anything new.
-// Runs on a timer via node-cron (wired up in server.js).
+// Background jobs that run on a timer (wired up in server.js). Capturing
+// itself happens entirely in the webhook (routes/webhook.js) - Story
+// mentions only ever arrive that way, in real time, while a capture is
+// live. This file used to also poll Instagram's /tags endpoint as a backup,
+// but that endpoint returns ordinary tagged posts (Reels, feed posts) going
+// back indefinitely, not Story mentions - on a brand new capture it would
+// pull in months-old, unrelated posts as if they'd just been captured. It's
+// been removed; what's left here just auto-ends captures whose time is up.
 
 const db = require('./db');
-const instagram = require('./instagram');
 const storage = require('./storage');
 
 // Anything soft-deleted more than 30 days ago gets permanently removed -
@@ -40,88 +44,30 @@ async function purgeExpiredDeletions() {
   }
 }
 
-async function pollActiveAlbums() {
+// Marks any capture whose end time has passed as "done". Runs every minute.
+async function autoStopEndedAlbums() {
   try {
-    // IMPORTANT: this works from a read-only snapshot and only writes its own
-    // changes back at the very end, onto a freshly-loaded copy. Saving the
-    // snapshot itself would overwrite anything the webhook (or a user) saved
-    // while this poll was waiting on the network - which is how captured
-    // files used to vanish from the app.
     const data = db.load();
     const now = new Date();
-    const endedAlbumIds = [];
-    const newVideos = [];
+    const endedAlbumIds = data.albums
+      .filter(a => a.status === 'capturing' && !a.deleted && a.end && new Date(a.end) <= now)
+      .map(a => a.id);
 
-    for (const album of data.albums) {
-      if (album.status !== 'capturing' || album.deleted) continue;
+    if (endedAlbumIds.length === 0) return; // nothing changed - don't touch the data file
 
-      if (album.end && new Date(album.end) <= now) {
-        endedAlbumIds.push(album.id);
-        continue;
-      }
-
-      const client = data.clients.find(c => c.id === album.clientId);
-      if (!client || !client.accessToken || !client.igUserId) continue;
-
-      try {
-        const mentions = await instagram.fetchRecentMentions(client.accessToken, client.igUserId);
-        const alreadySeen = new Set(data.videos.filter(v => v.albumId === album.id).map(v => v.sourceMediaId));
-
-        for (const mention of mentions) {
-          if (alreadySeen.has(mention.id)) continue;
-          if (!mention.media_url) continue; // nothing to download
-
-          const buffer = await instagram.downloadMediaFile(mention.media_url);
-          const ext = mention.media_type === 'VIDEO' ? 'mp4' : 'jpg';
-          const filename = `${mention.username}_${Date.now()}.${ext}`;
-
-          const key = await storage.uploadMedia({
-            clientId: client.id,
-            albumId: album.id,
-            filename,
-            buffer,
-            contentType: mention.media_type === 'VIDEO' ? 'video/mp4' : 'image/jpeg',
-          });
-
-          newVideos.push({
-            id: `v_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-            albumId: album.id,
-            clientId: client.id,
-            sourceMediaId: mention.id,
-            tagger: mention.username,
-            type: mention.media_type === 'VIDEO' ? 'video' : 'photo',
-            storageKey: key,
-            timestamp: mention.timestamp,
-            mark: null,
-            deleted: false,
-          });
-        }
-      } catch (err) {
-        // A single client's API hiccup shouldn't crash the whole poll cycle.
-        console.error(`Capture poll failed for client ${client.id}:`, err.message);
-      }
-    }
-
-    // Nothing changed - don't touch the data file at all.
-    if (endedAlbumIds.length === 0 && newVideos.length === 0) return;
-
-    // Re-load right before saving (no waiting in between), and apply only
-    // this poll's own changes on top of whatever is there now.
+    // Re-load right before saving, and apply only this run's own changes on
+    // top of whatever is there now - avoids clobbering a capture the
+    // webhook (or a user) saved in the meantime.
     const fresh = db.load();
     for (const album of fresh.albums) {
       if (endedAlbumIds.includes(album.id) && album.status === 'capturing') album.status = 'done';
-    }
-    for (const video of newVideos) {
-      if (!fresh.videos.some(v => v.albumId === video.albumId && v.sourceMediaId === video.sourceMediaId)) {
-        fresh.videos.push(video);
-      }
     }
     db.save(fresh);
   } catch (err) {
     // Nothing in this function should ever be able to take the whole
     // server down - log it and move on to the next scheduled run.
-    console.error('pollActiveAlbums failed entirely:', err);
+    console.error('autoStopEndedAlbums failed entirely:', err);
   }
 }
 
-module.exports = { pollActiveAlbums, purgeExpiredDeletions };
+module.exports = { autoStopEndedAlbums, purgeExpiredDeletions };

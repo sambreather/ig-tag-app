@@ -8,30 +8,9 @@ const axios = require('axios');
 const GRAPH_BASE = 'https://graph.instagram.com';
 
 /**
- * Fetches recent mentions/tags for a given Instagram Business account.
- * Meta's exact endpoint/field names shift periodically - this wraps that
- * call in one place so future adjustments only need to happen here.
- */
-async function fetchRecentMentions(accessToken, igUserId) {
-  const url = `${GRAPH_BASE}/${igUserId}/tags`;
-  const res = await axios.get(url, {
-    params: {
-      fields: 'id,media_type,media_url,timestamp,username,permalink',
-      access_token: accessToken,
-    },
-  });
-  return res.data.data || [];
-}
-
-/** Downloads the actual media file bytes for a given mention's media_url. */
-async function downloadMediaFile(mediaUrl) {
-  const res = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
-  return Buffer.from(res.data);
-}
-
-/**
- * Same download, but also returns the Content-Type the server sent, so the
- * caller can tell photos from videos without guessing from the URL.
+ * Downloads the actual media file bytes for a Story mention's media_url,
+ * along with the Content-Type the server sent, so the caller can tell
+ * photos from videos without guessing from the URL.
  */
 async function downloadMedia(mediaUrl) {
   const res = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
@@ -52,8 +31,6 @@ async function fetchUsername(senderId, accessToken) {
 }
 
 module.exports = {
-  fetchRecentMentions,
-  downloadMediaFile,
   downloadMedia,
   fetchUsername,
 };

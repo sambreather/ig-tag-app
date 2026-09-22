@@ -14,7 +14,7 @@ const albumsRouter = require('./routes/albums');
 const videosRouter = require('./routes/videos');
 const settingsRouter = require('./routes/settings');
 const webhookRouter = require('./routes/webhook');
-const { pollActiveAlbums, purgeExpiredDeletions } = require('./services/capture');
+const { autoStopEndedAlbums, purgeExpiredDeletions } = require('./services/capture');
 const db = require('./services/db');
 
 const app = express();
@@ -78,14 +78,10 @@ app.use('/api', albumsRouter);
 app.use('/api', videosRouter);
 app.use('/api', settingsRouter);
 
-// Poll every 5 minutes for new tagged content on active captures.
-cron.schedule('*/5 * * * *', () => {
-  pollActiveAlbums().catch(err => console.error('Poll cycle error:', err));
-});
-
-// Also auto-stop any albums whose end time has just passed, every minute.
+// Auto-stop any captures whose end time has just passed. Capturing itself
+// happens live via the webhook, not on a timer - see services/capture.js.
 cron.schedule('* * * * *', () => {
-  pollActiveAlbums().catch(() => {}); // pollActiveAlbums already handles end-time checks
+  autoStopEndedAlbums().catch(err => console.error('Auto-stop cycle error:', err));
 });
 
 // Permanently remove anything that's been in Deleted Files for 30+ days.
