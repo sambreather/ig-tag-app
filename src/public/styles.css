@@ -130,33 +130,39 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 .modal-card { background: var(--surface-1); border-radius: 12px; padding: 16px; width: 230px; border: 3px solid transparent; }
 .modal-card.small { width: 220px; }
 .modal-card.centered-text { text-align: center; }
-.modal-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.modal-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; width: 100%; }
 /* The preview modal specifically (not the small alert/picker/confirm
    modals, which keep the base .modal-card width) - sized by height rather
    than a fixed width, so it's much bigger than a grid thumbnail while
-   never overflowing the window on either axis. */
+   never overflowing the window on either axis.
+   The aspect-ratio lives on the MEDIA wrap, not the card: putting it on
+   the card meant the card's width was derived from its full height
+   (including the header/controls/hint-row text), so once that chrome
+   took up more room - e.g. the hint row wrapping to 2 lines on a narrow
+   screen - the video got less height than the card's own ratio assumed,
+   and object-fit:contain letterboxed it, showing black bars down the
+   sides. Sizing the wrap itself (which only ever holds the video/image)
+   and letting the card just hug that width removes the bars entirely,
+   at any screen size. */
 #previewCard {
-  width: auto;
-  max-width: 90vw;
   height: 90vh;
   max-height: 90vh;
-  aspect-ratio: 9 / 16;
+  max-width: 90vw;
+  width: max-content;
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
-/* object-fit:contain means the actual photo/video never distorts even
-   though the header/controls rows eat into the card's 9:16 shape a
-   little, so the media itself ends up slightly shorter than a true 9:16. */
-.preview-media-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+.preview-media-wrap { position: relative; flex: 1 1 auto; min-height: 0; aspect-ratio: 9 / 16; }
 .preview-video { width: 100%; height: 100%; background: #000; border-radius: 8px; object-fit: contain; }
 .preview-image { object-fit: contain; }
 /* Big tap-to-play button over the video, centred - hidden while playing,
    shown when paused or ended (wired up in app.js). Not shown for photos. */
 .preview-play-btn { position: absolute; inset: 0; margin: auto; width: 64px; height: 64px; padding: 0; border: none; background: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .preview-play-btn:hover, .preview-play-btn:focus { background: none; }
-.modal-card-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.modal-card-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; width: 100%; }
 .modal-actions { display: flex; gap: 5px; }
-.hint-row { font-size: 10px; color: var(--text-muted); text-align: center; margin-top: 10px; line-height: 1.6; }
+.hint-row { font-size: 10px; color: var(--text-muted); text-align: center; margin-top: 10px; line-height: 1.6; width: 100%; }
 .modal-buttons { display: flex; gap: 8px; margin-top: 14px; }
 .modal-buttons button { flex: 1; }
 
