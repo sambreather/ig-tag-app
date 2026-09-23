@@ -19,7 +19,7 @@ module.exports = {
   },
   footer: {
     settingsLink: 'Settings',
-    logoutLink: 'Log out',
+    logoutLink: 'Log Out',
   },
   albumList: {
     statusCapturing: 'Capturing',

@@ -26,7 +26,7 @@ const CONTENT = {
 
   footer: {
     settingsLink: 'Settings',
-    logoutLink: 'Log out',
+    logoutLink: 'Log Out',
   },
 
   albumList: {
