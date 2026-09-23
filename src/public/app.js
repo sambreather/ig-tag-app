@@ -466,8 +466,9 @@ function renderAlbumList() {
   list.innerHTML = state.albums.map(a => {
     const isLive = a.status === 'capturing';
     const statusLabel = a.status === 'capturing' ? CONTENT.albumList.statusCapturing : a.status === 'scheduled' ? CONTENT.albumList.statusScheduled : CONTENT.albumList.statusDone;
+    const totalCount = (a.videoCount || 0) + (a.photoCount || 0);
     const filesText = a.status === 'scheduled' ? '' :
-      `<span class="bold">${(a.videoCount || 0) + (a.photoCount || 0)} files</span> <span class="muted">(${a.videoCount || 0} videos/${a.photoCount || 0} photos)</span>`;
+      `<span class="bold">${totalCount} ${pluralize(totalCount, 'file')}</span> <span class="muted">(${a.videoCount || 0} ${pluralize(a.videoCount || 0, 'video')}/${a.photoCount || 0} ${pluralize(a.photoCount || 0, 'photo')})</span>`;
     const dates = a.status === 'capturing' ? `Started ${fmtShort(a.start)}` : `${fmtShort(a.start)} → ${fmtShort(a.end)}`;
     return `
       <div class="album-row ${isLive ? 'live' : ''}">
@@ -490,10 +491,20 @@ function renderAlbumList() {
   renderIcons(list);
 }
 
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Always exactly 3 letters (e.g. "Sep"), regardless of the visitor's
+// browser language - the built-in Intl formatter gives "Sept" for
+// September under an en-GB locale, so it's built from a fixed list instead.
 function fmtShort(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ', ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}, ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+// "1 file" vs "2 files" - avoids the app reading "1 files"/"1 videos" etc.
+function pluralize(count, singular, plural) {
+  return count === 1 ? singular : (plural || singular + 's');
 }
 
 async function deleteAlbum(albumId) {
@@ -774,9 +785,22 @@ function openPreview(idx) {
   renderPreview();
   document.getElementById('previewModal').style.display = 'flex';
 }
+// Same modal, opened from Deleted Files: no save/delete marking (nothing
+// to mark on an already-deleted item), just a Restore button, but still
+// browsable with prev/next like the main grid.
+function openDeletedPreview(idx) {
+  state.previewMode = 'deleted'; state.previewIdx = idx; state.modalOpen = true;
+  document.getElementById('previewActionsNormal').style.display = 'none';
+  document.getElementById('previewActionsDeleted').style.display = 'flex';
+  document.getElementById('previewHintRow').style.display = 'none';
+  renderPreview();
+  document.getElementById('previewModal').style.display = 'flex';
+}
+function currentPreviewList() { return state.previewMode === 'grid' ? state.videos : state.deletedVideos; }
 function renderPreview() {
-  const v = state.previewMode === 'grid' ? state.videos[state.previewIdx] : state.deletedVideos[state.previewIdx];
-  document.getElementById('previewCounter').textContent = state.previewMode === 'grid' ? `${state.previewIdx+1}/${state.videos.length}` : '';
+  const list = currentPreviewList();
+  const v = list[state.previewIdx];
+  document.getElementById('previewCounter').textContent = `${state.previewIdx + 1}/${list.length}`;
   document.getElementById('previewTagger').textContent = `@${v.tagger}`;
   document.getElementById('previewStarBtn').classList.toggle('active', v.mark === 'save');
   document.getElementById('previewCard').className = 'modal-card ' + (v.mark || '');
@@ -791,8 +815,8 @@ function renderPreview() {
   });
 }
 function navPreview(dir) {
-  if (state.previewMode !== 'grid') return;
-  state.previewIdx = dir === 'next' ? (state.previewIdx + 1) % state.videos.length : (state.previewIdx - 1 + state.videos.length) % state.videos.length;
+  const len = currentPreviewList().length;
+  state.previewIdx = dir === 'next' ? (state.previewIdx + 1) % len : (state.previewIdx - 1 + len) % len;
   renderPreview();
 }
 document.getElementById('prevArrow').addEventListener('click', () => navPreview('prev'));
@@ -824,16 +848,18 @@ async function markCurrentAndAdvance(mark) {
   if (state.previewIdx < state.videos.length - 1) navPreview('next'); else renderPreview();
 }
 document.addEventListener('keydown', e => {
-  if (!state.modalOpen || state.previewMode !== 'grid') return;
+  if (!state.modalOpen) return;
   const video = document.getElementById('previewVideoEl');
   const k = e.key.toLowerCase();
+  // Browsing and playback work in both modes; only save/delete marking
+  // (there's nothing to mark on an already-deleted item) stays grid-only.
   if (e.key === 'ArrowDown') { e.preventDefault(); navPreview('next'); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); navPreview('prev'); }
   else if (e.key === ' ') { e.preventDefault(); if (video.style.display !== 'none') video.paused ? video.play() : video.pause(); }
   else if (e.key === 'ArrowLeft') { if (video.style.display !== 'none') video.currentTime = Math.max(0, video.currentTime - 5); }
   else if (e.key === 'ArrowRight') { if (video.style.display !== 'none') video.currentTime += 5; }
-  else if (k === 's') markCurrentAndAdvance('save');
-  else if (k === 'd') markCurrentAndAdvance('delete');
+  else if (state.previewMode === 'grid' && k === 's') markCurrentAndAdvance('save');
+  else if (state.previewMode === 'grid' && k === 'd') markCurrentAndAdvance('delete');
 });
 
 // --- Deleted files ---
@@ -846,6 +872,7 @@ async function showDeletedFiles() {
   document.getElementById('deletedClientTitle').textContent = `${client.name} ${CONTENT.deletedFiles.titleSuffix}`;
 
   const videos = await api(`/clients/${state.currentClientId}/deleted-videos`);
+  state.deletedVideos = videos; // flat list, same order as rendered - what the preview modal navigates
   const wrap = document.getElementById('deletedGroups');
 
   if (videos.length === 0) {
@@ -887,6 +914,10 @@ async function showDeletedFiles() {
     </div>
   `).join('');
 
+  wrap.querySelectorAll('.thumb[data-preview]').forEach(el => el.addEventListener('click', () => {
+    const idx = state.deletedVideos.findIndex(v => v.id === el.dataset.preview);
+    if (idx !== -1) openDeletedPreview(idx);
+  }));
   wrap.querySelectorAll('[data-restore-album]').forEach(btn => btn.addEventListener('click', async () => {
     await api(`/albums/${btn.dataset.restoreAlbum}/restore`, { method: 'POST' });
     showDeletedFiles();

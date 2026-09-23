@@ -131,7 +131,23 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 .modal-card.small { width: 220px; }
 .modal-card.centered-text { text-align: center; }
 .modal-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.preview-video { width: 100%; aspect-ratio: 9/16; background: #000; border-radius: 8px; }
+/* The preview modal specifically (not the small alert/picker/confirm
+   modals, which keep the base .modal-card width) - sized by height rather
+   than a fixed width, so it's much bigger than a grid thumbnail while
+   never overflowing the window on either axis. */
+#previewCard {
+  width: auto;
+  max-width: 90vw;
+  height: 90vh;
+  max-height: 90vh;
+  aspect-ratio: 9 / 16;
+  display: flex;
+  flex-direction: column;
+}
+/* object-fit:contain means the actual photo/video never distorts even
+   though the header/controls rows eat into the card's 9:16 shape a
+   little, so the media itself ends up slightly shorter than a true 9:16. */
+.preview-video { width: 100%; background: #000; border-radius: 8px; flex: 1 1 auto; min-height: 0; object-fit: contain; }
 .preview-image { object-fit: contain; }
 .modal-card-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
 .modal-actions { display: flex; gap: 5px; }
