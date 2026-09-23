@@ -83,7 +83,14 @@ router.get('/clients/:clientId/deleted-videos', (req, res) => {
   const videos = data.videos.filter(v => v.clientId === req.params.clientId && v.deleted);
   const withAlbumNames = videos.map(v => {
     const album = data.albums.find(a => a.id === v.albumId);
-    return { ...v, albumName: album ? album.name : 'Deleted capture', albumDeleted: album ? album.deleted : true };
+    return {
+      ...v,
+      albumName: album ? album.name : 'Deleted capture',
+      albumDeleted: album ? album.deleted : true,
+      // Same idea as the main grid: a real preview picture instead of a
+      // placeholder, via a temporary (1 hour) link, made fresh each time.
+      previewUrl: storage.getSignedDownloadUrl(v.storageKey, 3600),
+    };
   });
   res.json(withAlbumNames);
 });

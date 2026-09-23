@@ -20,6 +20,7 @@ const ICONS = {
   play: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></svg>',
   grid: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
   'grid-large': '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>',
+  restore: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
 };
 
 // Finds every <i class="icon-xxx"> inside the given root (or the whole
@@ -864,14 +865,22 @@ async function showDeletedFiles() {
         <div class="deleted-group-title">${group.name}</div>
         ${group.albumDeleted ? `<button data-restore-album="${albumId}" class="btn-small">${CONTENT.deletedFiles.restoreCaptureButton}</button>` : ''}
       </div>
-      <div class="deleted-grid">
+      <div class="video-grid">
         ${group.videos.map(v => `
           <div class="video-card">
             <div class="thumb" data-preview="${v.id}">
-              <i class="icon-play"></i>
-              <div class="tag-label">@${v.tagger}</div>
+              ${v.previewUrl ? (v.type === 'photo'
+                ? `<img class="thumb-media" src="${v.previewUrl}" loading="lazy" alt="">`
+                : `<video class="thumb-media" src="${v.previewUrl}#t=0.1" preload="metadata" muted playsinline></video>`) : ''}
+              ${v.type === 'photo' ? '' : '<i class="icon-play"></i>'}
             </div>
-            ${group.albumDeleted ? '' : `<button data-restore-video="${v.id}" class="btn-small" style="width:100%;">${CONTENT.deletedFiles.restoreButton}</button>`}
+            <div class="card-footer">
+              <div class="card-meta-row">
+                <span class="card-tagger">@${v.tagger}</span>
+                <span class="card-time">${formatCardMeta(v.timestamp)}</span>
+              </div>
+              ${group.albumDeleted ? '' : `<button data-restore-video="${v.id}" class="btn-restore"><i class="icon-restore"></i>${CONTENT.deletedFiles.restoreButton}</button>`}
+            </div>
           </div>
         `).join('')}
       </div>

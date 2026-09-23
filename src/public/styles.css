@@ -153,7 +153,7 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 .deleted-group { margin-bottom: 18px; }
 .deleted-group-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .deleted-group-title { font-size: 13px; font-weight: 600; }
-.deleted-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; margin-bottom: 16px; }
+.btn-restore { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; font-size: 11px; padding: 6px 0; }
 
 /* Placeholder icons using simple characters - swap for a real icon set
    (e.g. Lucide, Tabler) once the app is deployed and we're polishing visuals. */
