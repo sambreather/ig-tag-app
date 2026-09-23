@@ -95,8 +95,8 @@ function applyContent() {
     document.getElementById('deleteClientBtn').textContent = CONTENT.clients.deleteButton;
   }
 
-  document.getElementById('deletedFilesBtn').innerHTML = `<i class="icon-trash"></i> ${CONTENT.topbar.deletedButton}`;
-  document.getElementById('newAlbumBtn').innerHTML = `<i class="icon-plus icon-green"></i> ${CONTENT.topbar.newAlbumButton}`;
+  document.getElementById('deletedFilesBtn').innerHTML = `<i class="icon-trash"></i><span>${CONTENT.topbar.deletedButton}</span>`;
+  document.getElementById('newAlbumBtn').innerHTML = `<i class="icon-plus icon-green"></i><span>${CONTENT.topbar.newAlbumButton}</span>`;
 
   document.getElementById('formName').placeholder = CONTENT.albumForm.namePlaceholder;
   document.getElementById('formStartLockedNote').textContent = CONTENT.albumForm.startLockedNote;
