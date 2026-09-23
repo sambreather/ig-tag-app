@@ -147,8 +147,13 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 /* object-fit:contain means the actual photo/video never distorts even
    though the header/controls rows eat into the card's 9:16 shape a
    little, so the media itself ends up slightly shorter than a true 9:16. */
-.preview-video { width: 100%; background: #000; border-radius: 8px; flex: 1 1 auto; min-height: 0; object-fit: contain; }
+.preview-media-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+.preview-video { width: 100%; height: 100%; background: #000; border-radius: 8px; object-fit: contain; }
 .preview-image { object-fit: contain; }
+/* Big tap-to-play button over the video, centred - hidden while playing,
+   shown when paused or ended (wired up in app.js). Not shown for photos. */
+.preview-play-btn { position: absolute; inset: 0; margin: auto; width: 64px; height: 64px; padding: 0; border: none; background: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.preview-play-btn:hover, .preview-play-btn:focus { background: none; }
 .modal-card-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
 .modal-actions { display: flex; gap: 5px; }
 .hint-row { font-size: 10px; color: var(--text-muted); text-align: center; margin-top: 10px; line-height: 1.6; }
@@ -177,5 +182,10 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
    they inherit their element's text color automatically. */
 i[class*="icon-"] { display: inline-flex; align-items: center; }
 i[class*="icon-"] svg { display: block; }
-.icon-play svg { color: var(--text-muted); }
+.icon-play svg { color: #fff; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.55)); }
 button.active .icon-star { color: var(--green); }
+
+/* Small "this is a video" badge, top-right of a video thumbnail - not
+   shown on photos, and not needed in the modal (the media itself is
+   full-size there). */
+.thumb .video-badge { position: absolute; top: 6px; right: 6px; z-index: 1; line-height: 0; }

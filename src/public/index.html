@@ -160,8 +160,11 @@
         <div id="previewTagger" class="meta-text"></div>
         <button id="closePreview" class="icon-btn"><i class="icon-x"></i></button>
       </div>
-      <video id="previewVideoEl" class="preview-video" playsinline></video>
-      <img id="previewImageEl" class="preview-video preview-image" alt="" style="display:none;">
+      <div id="previewMediaWrap" class="preview-media-wrap">
+        <video id="previewVideoEl" class="preview-video" playsinline></video>
+        <img id="previewImageEl" class="preview-video preview-image" alt="" style="display:none;">
+        <button id="previewPlayBtn" class="preview-play-btn" aria-label="Play" style="display:none;"><i class="icon-play"></i></button>
+      </div>
       <div class="modal-card-controls">
         <button id="prevArrow" class="icon-btn"><i class="icon-chevron-left"></i></button>
         <div id="previewActionsNormal" class="modal-actions">

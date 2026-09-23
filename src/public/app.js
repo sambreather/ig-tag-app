@@ -17,7 +17,8 @@ const ICONS = {
   x: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
   settings: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>',
   trash: '<svg viewBox="1 0 22 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m4 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z"/></svg>',
-  play: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></svg>',
+  play: '<svg viewBox="0 0 24 24" width="44" height="44" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></svg>',
+  'video-badge': '<svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="11" fill="#fff"/><path d="M10 8.2v7.6l6-3.8z" fill="var(--bg)"/></svg>',
   grid: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
   'grid-large': '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>',
   restore: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
@@ -701,7 +702,7 @@ function renderGrid() {
         ${v.previewUrl ? (v.type === 'photo'
           ? `<img class="thumb-media" src="${v.previewUrl}" loading="lazy" alt="">`
           : `<video class="thumb-media" src="${v.previewUrl}#t=0.1" preload="metadata" muted playsinline></video>`) : ''}
-        ${v.type === 'photo' ? '' : '<i class="icon-play"></i>'}
+        ${v.type === 'photo' ? '' : '<i class="icon-play"></i><div class="video-badge"><i class="icon-video-badge"></i></div>'}
       </div>
       <div class="card-footer">
         <div class="card-meta-row">
@@ -806,14 +807,33 @@ function renderPreview() {
   document.getElementById('previewCard').className = 'modal-card ' + (v.mark || '');
   const videoEl = document.getElementById('previewVideoEl');
   const imageEl = document.getElementById('previewImageEl');
+  const playBtn = document.getElementById('previewPlayBtn');
   const isPhoto = v.type === 'photo';
   videoEl.style.display = isPhoto ? 'none' : '';
   imageEl.style.display = isPhoto ? '' : 'none';
   videoEl.pause();
+  playBtn.style.display = isPhoto ? 'none' : 'flex'; // a fresh video always starts paused
   api(`/videos/${v.id}/download-url`).then(({ url }) => {
     if (isPhoto) imageEl.src = url; else videoEl.src = url;
   });
 }
+// Big centre play button: click to start, and it hides itself while
+// playing and comes back when paused or when playback finishes - covers
+// both this button and the Space-bar shortcut, since both end up
+// triggering these same native video events.
+document.getElementById('previewPlayBtn').addEventListener('click', () => {
+  document.getElementById('previewVideoEl').play();
+});
+document.getElementById('previewVideoEl').addEventListener('play', () => {
+  document.getElementById('previewPlayBtn').style.display = 'none';
+});
+['pause', 'ended'].forEach(evt => {
+  document.getElementById('previewVideoEl').addEventListener(evt, () => {
+    if (document.getElementById('previewVideoEl').style.display !== 'none') {
+      document.getElementById('previewPlayBtn').style.display = 'flex';
+    }
+  });
+});
 function navPreview(dir) {
   const len = currentPreviewList().length;
   state.previewIdx = dir === 'next' ? (state.previewIdx + 1) % len : (state.previewIdx - 1 + len) % len;
@@ -899,7 +919,7 @@ async function showDeletedFiles() {
               ${v.previewUrl ? (v.type === 'photo'
                 ? `<img class="thumb-media" src="${v.previewUrl}" loading="lazy" alt="">`
                 : `<video class="thumb-media" src="${v.previewUrl}#t=0.1" preload="metadata" muted playsinline></video>`) : ''}
-              ${v.type === 'photo' ? '' : '<i class="icon-play"></i>'}
+              ${v.type === 'photo' ? '' : '<i class="icon-play"></i><div class="video-badge"><i class="icon-video-badge"></i></div>'}
             </div>
             <div class="card-footer">
               <div class="card-meta-row">
