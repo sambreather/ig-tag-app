@@ -667,6 +667,19 @@ function sortVideos(mode) {
   else state.videos.sort((a, b) => a.tagger.localeCompare(b.tagger));
 }
 
+// "9.45pm, 23/09/26" - matches the style used for the card meta row.
+function formatCardMeta(timestamp) {
+  const d = new Date(timestamp);
+  let h = d.getHours();
+  const ampm = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = String(d.getFullYear()).slice(-2);
+  return `${h}.${m}${ampm}, ${day}/${month}/${year}`;
+}
+
 function renderGrid() {
   const grid = document.getElementById('videoGrid');
   grid.className = 'video-grid' + (state.gridSize === 'large' ? ' large' : '');
@@ -677,10 +690,12 @@ function renderGrid() {
           ? `<img class="thumb-media" src="${v.previewUrl}" loading="lazy" alt="">`
           : `<video class="thumb-media" src="${v.previewUrl}#t=0.1" preload="metadata" muted playsinline></video>`) : ''}
         ${v.type === 'photo' ? '' : '<i class="icon-play"></i>'}
-        <div class="tag-label">@${v.tagger}</div>
       </div>
       <div class="card-footer">
-        <div class="card-time">${new Date(v.timestamp).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}</div>
+        <div class="card-meta-row">
+          <span class="card-tagger">@${v.tagger}</span>
+          <span class="card-time">${formatCardMeta(v.timestamp)}</span>
+        </div>
         <div class="card-actions">
           <button data-dl="${idx}" aria-label="Download"><i class="icon-download"></i></button>
           <button data-star="${idx}" class="${v.mark==='save'?'active':''}" aria-label="Toggle starred"><i class="icon-star"></i></button>
