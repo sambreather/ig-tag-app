@@ -16,7 +16,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text-primary); }
 
-.screen { padding: 16px; max-width: 720px; margin: 0 auto; }
+.screen { padding: 16px; max-width: 1000px; margin: 0 auto; }
 .screen.centered { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
 
 /* Default: hide both until the inline script (in index.html, runs before
@@ -91,8 +91,22 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 .toolbar-left, .toolbar-right { display: flex; gap: 6px; align-items: center; }
 
 .grid-container { position: relative; }
-.video-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
-.video-grid.large { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+/* Fixed column counts (not auto-fit) so a small capture still lays out as
+   a proper grid instead of stretching its few items to fill the row.
+   Narrower breakpoints step the counts down so phones stay usable - there
+   was no responsive handling before this beyond auto-fit doing it for
+   free, so these replace that. */
+.video-grid { display: grid; gap: 10px; grid-template-columns: repeat(5, 1fr); }
+.video-grid.large { grid-template-columns: repeat(3, 1fr); }
+
+@media (max-width: 700px) {
+  .video-grid { grid-template-columns: repeat(3, 1fr); }
+  .video-grid.large { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .video-grid { grid-template-columns: repeat(2, 1fr); }
+  .video-grid.large { grid-template-columns: repeat(1, 1fr); }
+}
 .video-card { background: var(--surface-1); border: 2px solid transparent; border-radius: 12px; overflow: hidden; }
 .video-card.save { border-color: var(--green); }
 .video-card.delete { border-color: var(--red); }
