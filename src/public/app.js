@@ -113,6 +113,9 @@ function applyContent() {
     <option value="oldest">${CONTENT.videos.sortOldest}</option>
     <option value="az">${CONTENT.videos.sortAlphabetical}</option>`;
 
+  document.getElementById('selectAllLink').textContent = CONTENT.videos.selectAllLink;
+  document.getElementById('selectNoneLink').textContent = CONTENT.videos.selectNoneLink;
+
   document.getElementById('previewHintRow').textContent = CONTENT.preview.hintRow;
   document.getElementById('previewRestoreBtn').textContent = CONTENT.deletedFiles.restoreButton;
   document.querySelector('#deletedView .meta-text').textContent = CONTENT.deletedFiles.retentionNote;
@@ -775,6 +778,25 @@ document.getElementById('deleteMarkedBtn').addEventListener('click', () => {
     renderGrid();
     showToast(fill(CONTENT.videos.deleteMultipleToast, { count: marked.length }), null);
   });
+});
+// Star (or un-star) everything in the capture in one go, rather than
+// clicking through every item - mainly so "download all" is a two-click
+// job instead of one click per file.
+document.getElementById('selectAllLink').addEventListener('click', async () => {
+  const toMark = state.videos.filter(v => v.mark !== 'save');
+  for (const v of toMark) {
+    v.mark = 'save';
+    await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: 'save' }) });
+  }
+  renderGrid();
+});
+document.getElementById('selectNoneLink').addEventListener('click', async () => {
+  const toClear = state.videos.filter(v => v.mark === 'save');
+  for (const v of toClear) {
+    v.mark = null;
+    await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: null }) });
+  }
+  renderGrid();
 });
 
 // --- Unified preview / review modal ---

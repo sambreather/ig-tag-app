@@ -71,6 +71,8 @@ module.exports = {
     sortNewest: 'Newest First',
     sortOldest: 'Oldest First',
     sortAlphabetical: 'Alphabetical',
+    selectAllLink: 'Select All',
+    selectNoneLink: 'Select None',
     downloadStarredConfirm: 'You\u2019re about to download {count} files as a .zip. Are you sure?',
     deleteMarkedConfirm: 'You\u2019re about to delete {count} files. Are you sure?',
     deleteSingleToast: '1 file deleted.',
