@@ -57,6 +57,9 @@ router.get('/videos/:videoId/download-url', (req, res) => {
 });
 
 // Download all "starred" (mark='save') videos in an album as a single .zip.
+// NOTE: reads whatever's currently saved here, not what the browser shows
+// on screen - see the matching note by downloadStarredBtn in app.js about
+// Select All/None racing ahead of this if clicked in very quick succession.
 router.get('/albums/:albumId/download-starred-zip', async (req, res) => {
   const data = db.load();
   const videos = data.videos.filter(v => v.albumId === req.params.albumId && v.mark === 'save' && !v.deleted);

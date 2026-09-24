@@ -770,6 +770,13 @@ async function deleteSingle(idx) {
   });
 }
 
+// NOTE: Select All/None saves each item's starred status in the
+// background rather than waiting for it (see those handlers below), so
+// clicking this immediately afterwards could, in theory, race ahead of
+// one of those saves - the server would build the zip from whatever it's
+// recorded so far, which might not yet be everything shown as starred on
+// screen. Once the real zip download is built, it should wait for any
+// in-flight mark saves to finish before opening the zip link.
 document.getElementById('downloadStarredBtn').addEventListener('click', () => {
   const count = state.videos.filter(v => v.mark === 'save').length;
   showConfirm(fill(CONTENT.videos.downloadStarredConfirm, { count }), () => {
