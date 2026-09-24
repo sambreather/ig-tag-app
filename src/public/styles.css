@@ -158,18 +158,40 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
    and object-fit:contain letterboxed it, showing black bars down the
    sides. Sizing the wrap itself (which only ever holds the video/image)
    and letting the card just hug that width removes the bars entirely,
-   at any screen size. */
+   at any screen size.
+   The card's own width is NOT css-driven (no width:max-content) - a
+   photo's real intrinsic size (e.g. 1200px wide) got used by that
+   sizing algorithm even with aspect-ratio pinning the wrap's actual
+   rendered box to 9:16, making a photo's card balloon far wider than a
+   video's for the same height. app.js sets an explicit pixel width here
+   instead, read directly off the wrap's own (correctly 9:16) rendered
+   size via a ResizeObserver, which sidesteps that entirely. */
 #previewCard {
   height: 90vh;
   max-height: 90vh;
   max-width: 90vw;
-  width: max-content;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-.preview-media-wrap { position: relative; flex: 1 1 auto; min-height: 0; aspect-ratio: 9 / 16; }
-.preview-video { width: 100%; height: 100%; background: #000; border-radius: 8px; object-fit: contain; }
+/* max-width:100% stops the wrap's own aspect-ratio maths from ever
+   pushing it wider than the card actually has room for (which could push
+   it outside the card, even off-screen, on a very narrow/tall window). */
+/* max-width is a viewport unit, not a percentage of the card - the card's
+   own width is set in app.js FROM this element's rendered size (see the
+   long comment on #previewCard), so a percentage here would depend on a
+   width that depends on this element, which resolves to nothing. Capping
+   against the viewport directly avoids that, and still stops this ever
+   being pushed wider than the screen on a very narrow/tall window. */
+.preview-media-wrap { position: relative; flex: 1 1 auto; min-height: 0; max-width: 90vw; aspect-ratio: 9 / 16; }
+/* aspect-ratio pinned here too, not just on the wrap above - a photo's
+   own real (non-9:16) intrinsic size was otherwise leaking into the
+   flex/aspect-ratio maths and making the whole card balloon far wider
+   for photos than videos (video has no fixed intrinsic size this early,
+   so it wasn't affected the same way) - now both are pinned to the same
+   shape regardless of the real media's own proportions, exactly like
+   object-fit:contain already keeps the true image undistorted inside it. */
+.preview-video { width: 100%; height: 100%; aspect-ratio: 9 / 16; background: #000; border-radius: 8px; object-fit: contain; }
 .preview-image { object-fit: contain; }
 /* Big tap-to-play button over the video, centred - hidden while playing,
    shown when paused or ended (wired up in app.js). Not shown for photos. */

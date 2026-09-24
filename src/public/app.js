@@ -951,6 +951,15 @@ function showVideoControls(autoHide) {
 const previewVideoEl = document.getElementById('previewVideoEl');
 const previewSeek = document.getElementById('previewSeek');
 
+// Keeps #previewCard's width matched to the media wrap's own (correctly
+// 9:16-shaped) rendered width - see the long comment by #previewCard in
+// styles.css for why this has to be done here rather than in CSS alone.
+// Set up once; ResizeObserver keeps it in sync on its own from here,
+// including the very first size it settles on.
+new ResizeObserver(entries => {
+  document.getElementById('previewCard').style.width = `${entries[0].contentRect.width}px`;
+}).observe(document.getElementById('previewMediaWrap'));
+
 previewVideoEl.addEventListener('loadedmetadata', () => {
   previewSeek.max = previewVideoEl.duration || 0;
   document.getElementById('previewTimeDisplay').textContent =
