@@ -788,21 +788,32 @@ document.getElementById('deleteMarkedBtn').addEventListener('click', () => {
 // Star (or un-star) everything in the capture in one go, rather than
 // clicking through every item - mainly so "download all" is a two-click
 // job instead of one click per file.
-document.getElementById('selectAllLink').addEventListener('click', async () => {
+// Updates every card's border/star-active state to match state.videos,
+// without rebuilding the grid - same reason as the single star button:
+// a full renderGrid() recreates every <video> element from scratch,
+// which flickers/reloads them all at once.
+function syncCardMarks() {
+  document.querySelectorAll('#videoGrid [data-star]').forEach(el => {
+    const v = state.videos[el.dataset.star];
+    el.closest('.video-card').className = 'video-card ' + (v.mark || '');
+    el.classList.toggle('active', v.mark === 'save');
+  });
+}
+document.getElementById('selectAllLink').addEventListener('click', () => {
   const toMark = state.videos.filter(v => v.mark !== 'save');
-  for (const v of toMark) {
-    v.mark = 'save';
-    await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: 'save' }) });
-  }
-  renderGrid();
+  toMark.forEach(v => v.mark = 'save');
+  syncCardMarks();
+  updateActionButtons(); // instant - the saves below happen in the
+  // background, in parallel, rather than one-by-one-then-render (which is
+  // what made this take longer the more items there were).
+  toMark.forEach(v => api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: 'save' }) }).catch(() => {}));
 });
-document.getElementById('selectNoneLink').addEventListener('click', async () => {
+document.getElementById('selectNoneLink').addEventListener('click', () => {
   const toClear = state.videos.filter(v => v.mark === 'save');
-  for (const v of toClear) {
-    v.mark = null;
-    await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: null }) });
-  }
-  renderGrid();
+  toClear.forEach(v => v.mark = null);
+  syncCardMarks();
+  updateActionButtons();
+  toClear.forEach(v => api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: null }) }).catch(() => {}));
 });
 
 // --- Unified preview / review modal ---
