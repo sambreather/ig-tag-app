@@ -895,6 +895,13 @@ function renderPreview() {
   videoEl.style.display = isPhoto ? 'none' : '';
   imageEl.style.display = isPhoto ? '' : 'none';
   videoEl.pause();
+  // Clears the OLD video's frame immediately - fetching the new item's
+  // link below takes a moment, and until it resolves this only pauses
+  // the previous item, leaving its last frame sitting on screen. It then
+  // jumps to the new one the instant the src is actually set, which
+  // reads as a flash of the wrong video before the right one appears.
+  videoEl.removeAttribute('src');
+  videoEl.load();
   playBtn.style.display = isPhoto ? 'none' : 'flex'; // a fresh video always starts paused
   videoControls.style.display = isPhoto ? 'none' : '';
   seek.value = 0;
