@@ -916,9 +916,29 @@ function renderPreview() {
   seek.style.setProperty('--progress', '0%');
   document.getElementById('previewTimeDisplay').textContent = '0:00 / 0:00';
   if (!isPhoto) showVideoControls(false); // paused state - stay visible, no auto-hide
-  api(`/videos/${v.id}/download-url`).then(({ url }) => {
-    if (isPhoto) imageEl.src = url; else videoEl.src = url;
-  });
+  loadPreviewMedia(v, isPhoto ? imageEl : videoEl, isPhoto);
+}
+
+// Points the modal's <video>/<img> at this item's file.
+// The grid already has a working link for every item (v.previewUrl, good
+// for an hour), so this uses it straight away instead of first waiting on
+// a network round trip to ask the server for a link - that wait was a big
+// part of the blank moment before a video showed. "#t=0.1" makes the
+// browser decode and show an early frame rather than sitting black.
+// If that link has gone stale (page left open for over an hour) or is
+// missing, it falls back to fetching a fresh one. Either way it ignores a
+// reply that arrives after you've already moved to another item.
+function loadPreviewMedia(v, el, isPhoto) {
+  const setSrc = url => { el.src = isPhoto ? url : `${url}#t=0.1`; };
+  const fetchFresh = () => {
+    el.onerror = null; // no retry loop if the fresh link fails too
+    api(`/videos/${v.id}/download-url`).then(({ url }) => {
+      if (currentPreviewList()[state.previewIdx] === v) setSrc(url);
+    }).catch(() => {});
+  };
+  if (!v.previewUrl) { fetchFresh(); return; }
+  el.onerror = fetchFresh;
+  setSrc(v.previewUrl);
 }
 // Big centre play button: click to start, and it hides itself while
 // playing and comes back when paused or when playback finishes - covers

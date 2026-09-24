@@ -225,6 +225,12 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
   cursor: pointer;
   display: block;
   margin: 2px 0 0;
+  /* The global `input, select, button` rule gives every input 8px 10px of
+     padding, and that 10px each side was what kept the track from spanning
+     the full row width - the input's OUTER box already lined up exactly,
+     the track just sat inside that padding. Only the horizontal part
+     changes (vertical was already 8px). */
+  padding: 8px 2px;
   border: none;
   outline: none;
   --progress: 0%;
