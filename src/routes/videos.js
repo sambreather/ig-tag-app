@@ -72,7 +72,10 @@ router.get('/albums/:albumId/download-starred-zip', async (req, res) => {
   const videos = data.videos.filter(v => v.albumId === req.params.albumId && v.mark === 'save' && !v.deleted);
   if (videos.length === 0) return res.status(400).json({ error: 'No starred videos' });
 
-  res.attachment('starred-videos.zip');
+  // e.g. "23 Sep test" -> "23-sep-test.zip", matching the capture's own name.
+  const album = data.albums.find(a => a.id === req.params.albumId);
+  const slug = (album ? album.name : '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  res.attachment(`${slug || 'capture'}.zip`);
   const archive = archiver('zip');
   archive.pipe(res);
   // In the real build: stream each file from B2 into the archive rather than

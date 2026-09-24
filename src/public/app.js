@@ -163,6 +163,13 @@ async function api(path, opts = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+// "23 Sep test" -> "23-sep-test" - for naming a downloaded file after a
+// capture, so it can't come out with spaces/punctuation a filesystem
+// might choke on.
+function slugifyFilename(name) {
+  return (name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'capture';
+}
+
 // Triggers a real browser "save as" for a URL, rather than navigating to
 // it - window.open() on a plain URL just opens/plays the file in a new
 // tab instead of downloading it, since B2 doesn't send a download-style
@@ -814,7 +821,8 @@ document.getElementById('downloadStarredBtn').addEventListener('click', () => {
     // window.open() can't attach that, so the server was rejecting it
     // with "Not authenticated". downloadFile() fetches it properly
     // instead (see its definition, by the api() helper, for why).
-    downloadFile(`/albums/${state.currentAlbumId}/download-starred-zip`, 'starred-videos.zip')
+    const album = state.albums.find(a => a.id === state.currentAlbumId);
+    downloadFile(`/albums/${state.currentAlbumId}/download-starred-zip`, `${slugifyFilename(album && album.name)}.zip`)
       .catch(() => showToast(CONTENT.videos.downloadFailedToast, null));
   });
 });
