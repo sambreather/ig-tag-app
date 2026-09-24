@@ -66,8 +66,12 @@ label { font-size: 12px; color: var(--text-secondary); display: block; margin: 1
 textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface-1); color: var(--text-primary); resize: vertical; }
 .btn-secondary { background: var(--surface-1); }
 .btn-small { font-size: 12px; padding: 6px 10px; }
-.btn-outline-green { border: 2px solid var(--green); color: var(--green); background: var(--surface-1); }
-.btn-outline-red { border: 2px solid var(--red); color: var(--red); background: var(--surface-1); }
+/* display:flex + gap, not a plain space character, for the same reason as
+   .btn-plain - otherwise the icon sits on the text's baseline and looks
+   taller/higher than the number next to it. */
+.btn-outline-green { border: 2px solid var(--green); color: var(--green); background: var(--surface-1); display: inline-flex; align-items: center; gap: 6px; }
+.btn-outline-red { border: 2px solid var(--red); color: var(--red); background: var(--surface-1); display: inline-flex; align-items: center; gap: 6px; }
+#downloadStarredBtn .icon-download svg, #deleteMarkedBtn .icon-trash svg { width: 12px; height: 12px; }
 /* display:flex centring, not just padding - an inline icon otherwise sits
    on the button's text baseline, which leaves extra space underneath it
    (room for a letter's descender) and makes it look pushed up off-centre. */
@@ -137,7 +141,11 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 .modal-card { background: var(--surface-1); border-radius: 12px; padding: 16px; width: 230px; border: 3px solid transparent; }
 .modal-card.small { width: 220px; }
 .modal-card.centered-text { text-align: center; }
-.modal-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; width: 100%; }
+.modal-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; width: 100%; gap: 8px; }
+/* Now carries the post date/time too ("@user - 9.45pm, 23/09/26"), which
+   can run long - truncates with an ellipsis on a narrow modal rather than
+   overflowing the card or pushing the close button out of view. */
+#previewTagger { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 /* The preview modal specifically (not the small alert/picker/confirm
    modals, which keep the base .modal-card width) - sized by height rather
    than a fixed width, so it's much bigger than a grid thumbnail while

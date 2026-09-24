@@ -725,8 +725,14 @@ function renderGrid() {
     e.stopPropagation();
     const v = state.videos[el.dataset.star];
     v.mark = v.mark === 'save' ? null : 'save';
+    // Update just this card's classes rather than rebuilding the whole
+    // grid - a full re-render recreates every <video> element from
+    // scratch, which briefly flickers/reloads them (photos don't show
+    // this, since an <img> just repaints instantly from cache).
+    el.closest('.video-card').className = 'video-card ' + (v.mark || '');
+    el.classList.toggle('active', v.mark === 'save');
+    updateActionButtons();
     await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: v.mark }) });
-    renderGrid();
   }));
   grid.querySelectorAll('[data-trash]').forEach(el => el.addEventListener('click', e => { e.stopPropagation(); deleteSingle(parseInt(el.dataset.trash)); }));
   grid.querySelectorAll('[data-dl]').forEach(el => el.addEventListener('click', async e => {
@@ -824,7 +830,7 @@ function renderPreview() {
   const list = currentPreviewList();
   const v = list[state.previewIdx];
   document.getElementById('previewCounter').textContent = `${state.previewIdx + 1}/${list.length}`;
-  document.getElementById('previewTagger').textContent = `@${v.tagger}`;
+  document.getElementById('previewTagger').textContent = `@${v.tagger} • ${formatCardMeta(v.timestamp)}`;
   document.getElementById('previewStarBtn').classList.toggle('active', v.mark === 'save');
   document.getElementById('previewCard').className = 'modal-card ' + (v.mark || '');
   const videoEl = document.getElementById('previewVideoEl');
@@ -866,8 +872,14 @@ document.getElementById('nextArrow').addEventListener('click', () => navPreview(
 document.getElementById('previewStarBtn').addEventListener('click', async () => {
   const v = state.videos[state.previewIdx];
   v.mark = v.mark === 'save' ? null : 'save';
+  // Same reason as the grid's star button: don't call renderPreview() here
+  // - it re-fetches a download link and resets the <video> element's src,
+  // which would restart playback from the beginning every time you star
+  // something mid-video. Just update the two things that actually changed.
+  document.getElementById('previewStarBtn').classList.toggle('active', v.mark === 'save');
+  document.getElementById('previewCard').className = 'modal-card ' + (v.mark || '');
   await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: v.mark }) });
-  renderPreview(); renderGrid();
+  renderGrid();
 });
 document.getElementById('previewTrashBtn').addEventListener('click', () => { const idx = state.previewIdx; closePreview(); deleteSingle(idx); });
 document.getElementById('previewRestoreBtn').addEventListener('click', async () => {
@@ -885,9 +897,14 @@ async function markCurrentAndAdvance(mark) {
   if (state.previewMode !== 'grid') return;
   const v = state.videos[state.previewIdx];
   v.mark = mark;
+  // Same as the star button: only navPreview() (moving to a genuinely
+  // different item) should reset the video/image - staying on the same
+  // item just needs these two bits updated directly.
+  document.getElementById('previewStarBtn').classList.toggle('active', v.mark === 'save');
+  document.getElementById('previewCard').className = 'modal-card ' + (v.mark || '');
   await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark }) });
   renderGrid();
-  if (state.previewIdx < state.videos.length - 1) navPreview('next'); else renderPreview();
+  if (state.previewIdx < state.videos.length - 1) navPreview('next');
 }
 document.addEventListener('keydown', e => {
   if (!state.modalOpen) return;
