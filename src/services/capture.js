@@ -13,32 +13,47 @@ const storage = require('./storage');
 
 // Anything soft-deleted more than 30 days ago gets permanently removed -
 // both from B2 storage and from our own records. Runs once a day.
+//
+// A video's record is only dropped once its file has really been deleted
+// from storage. If storage refuses (network blip, bad key, B2 down), the
+// record stays, so tomorrow's run tries again - dropping it anyway used to
+// leave the file sitting in the bucket with nothing pointing at it, never
+// to be cleaned up.
 async function purgeExpiredDeletions() {
   try {
-    const data = db.load();
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const isExpired = item => item.deleted && item.deletedAt && new Date(item.deletedAt).getTime() < cutoff;
 
-    const videosToKeep = [];
-    for (const video of data.videos) {
-      if (video.deleted && video.deletedAt && new Date(video.deletedAt).getTime() < cutoff) {
-        try {
-          await storage.permanentlyDelete(video.storageKey);
-        } catch (err) {
-          console.error(`Failed to purge storage for video ${video.id}:`, err.message);
-        }
-        continue; // drop it from our records either way
+    // Read-only snapshot to decide what to delete; the (slow) storage calls
+    // happen against this.
+    const snapshot = db.load();
+    const purgedIds = new Set();
+    for (const video of snapshot.videos) {
+      if (!isExpired(video)) continue;
+      try {
+        await storage.permanentlyDelete(video.storageKey);
+        purgedIds.add(video.id);
+      } catch (err) {
+        console.error(`Failed to purge storage for video ${video.id} - keeping its record so the next run retries:`, err.message);
       }
-      videosToKeep.push(video);
     }
-    data.videos = videosToKeep;
 
-    // Albums themselves have no file to remove from storage (their videos
-    // already handled their own files above) - just drop the record.
-    data.albums = data.albums.filter(a =>
-      !(a.deleted && a.deletedAt && new Date(a.deletedAt).getTime() < cutoff)
-    );
+    // Re-load right before saving (no waiting in between) and apply only
+    // this run's changes on top of whatever is there now - saving the
+    // snapshot instead would overwrite anything saved while we were busy
+    // talking to storage (e.g. a Story captured at that moment).
+    const data = db.load();
+    const videosBefore = data.videos.length;
+    const albumsBefore = data.albums.length;
+    data.videos = data.videos.filter(v => !purgedIds.has(v.id));
 
-    db.save(data);
+    // Albums have no file of their own. Drop an expired one only when none
+    // of its videos are still waiting on a retry, so no video is left
+    // pointing at an album that no longer exists.
+    const albumsStillInUse = new Set(data.videos.map(v => v.albumId));
+    data.albums = data.albums.filter(a => !(isExpired(a) && !albumsStillInUse.has(a.id)));
+
+    if (data.videos.length !== videosBefore || data.albums.length !== albumsBefore) db.save(data);
   } catch (err) {
     console.error('purgeExpiredDeletions failed entirely:', err);
   }
