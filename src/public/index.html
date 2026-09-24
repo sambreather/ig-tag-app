@@ -66,9 +66,20 @@
       </div>
       <label>Client name</label>
       <input id="editClientName" type="text">
-      <label>Instagram Business account ID</label>
+
+      <label id="connectLabel">Instagram connection</label>
+      <div id="connectStatus" class="meta-text" style="margin-bottom:8px;"></div>
+      <button id="generateConnectLinkBtn" class="btn-outline-green">Connect via Instagram</button>
+      <div id="connectLinkBox" style="display:none; margin-top:8px;">
+        <input id="connectLinkInput" type="text" readonly>
+        <button id="copyConnectLinkBtn" class="btn-small" style="margin-top:6px;">Copy link</button>
+        <div id="connectLinkNote" class="meta-text" style="margin-top:4px;"></div>
+      </div>
+
+      <label id="manualLabel" style="margin-top:16px;">Or enter manually</label>
+      <label id="editClientIgIdLabel">Instagram Business account ID</label>
       <input id="editClientIgId" type="text">
-      <label>Access token</label>
+      <label id="editClientTokenLabel">Access token</label>
       <input id="editClientToken" type="text">
       <button id="saveClientEditBtn" class="btn-primary" style="margin-top:16px;">Save changes</button>
       <button id="deleteClientBtn" class="btn-outline-red" style="margin-top:16px; margin-left:8px;">Delete client</button>

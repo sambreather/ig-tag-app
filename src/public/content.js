@@ -76,6 +76,18 @@ const CONTENT = {
     saveFailedWarning: 'Something went wrong saving these changes. Please try again.',
     addFailedWarning: 'Something went wrong adding this client. Please try again.',
     savedToast: 'Client saved.',
+    connectLabel: 'Instagram connection',
+    connectButton: 'Connect via Instagram',
+    connectStatusNone: 'Not connected yet.',
+    connectStatusConnected: 'Connected as @{username}.',
+    connectStatusConnectedNoUsername: 'Connected.',
+    connectStatusNeedsReconnect: 'The connection has stopped working - generate a new link below to reconnect.',
+    connectStatusPendingLink: 'A link is waiting to be opened. It expires {time}.',
+    connectLinkFailedWarning: 'Something went wrong creating the link. Please try again.',
+    copyLinkButton: 'Copy link',
+    linkCopiedToast: 'Link copied.',
+    linkExpiryNote: 'Works once, for whoever opens it next. Expires {time}.',
+    manualLabel: 'Or enter manually',
   },
 
   picker: {

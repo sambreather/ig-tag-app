@@ -134,8 +134,16 @@ function applyContent() {
   document.querySelectorAll('#noClientsView label')[1].textContent = CONTENT.clients.igIdLabel;
   document.querySelectorAll('#noClientsView label')[2].textContent = CONTENT.clients.tokenLabel;
   document.querySelectorAll('#editClientView label')[0].textContent = CONTENT.clients.nameLabel;
-  document.querySelectorAll('#editClientView label')[1].textContent = CONTENT.clients.igIdLabel;
-  document.querySelectorAll('#editClientView label')[2].textContent = CONTENT.clients.tokenLabel;
+  // These two used to be found by position (label[1], label[2]) - broke the
+  // moment the connect-flow section above added new labels in between, so
+  // they're looked up by id instead now, same as everything else here.
+  document.getElementById('editClientIgIdLabel').textContent = CONTENT.clients.igIdLabel;
+  document.getElementById('editClientTokenLabel').textContent = CONTENT.clients.tokenLabel;
+
+  document.getElementById('connectLabel').textContent = CONTENT.clients.connectLabel;
+  document.getElementById('generateConnectLinkBtn').textContent = CONTENT.clients.connectButton;
+  document.getElementById('copyConnectLinkBtn').textContent = CONTENT.clients.copyLinkButton;
+  document.getElementById('manualLabel').textContent = CONTENT.clients.manualLabel;
   renderIcons();
 }
 applyContent();
@@ -462,9 +470,47 @@ document.getElementById('editClientBtn').addEventListener('click', () => {
   const tokenInput = document.getElementById('editClientToken');
   tokenInput.value = '';
   tokenInput.placeholder = client.hasToken ? CONTENT.clients.tokenSavedPlaceholder : CONTENT.clients.tokenPlaceholder;
+  renderConnectStatus(client);
   showScreen('editClientView');
 });
 document.getElementById('backFromEditClientBtn').addEventListener('click', () => showScreen('albumsView'));
+
+function renderConnectStatus(client) {
+  document.getElementById('connectLinkBox').style.display = 'none'; // fresh open - don't show a stale link from last time
+  const statusEl = document.getElementById('connectStatus');
+  if (client.tokenNeedsReconnect) {
+    statusEl.textContent = CONTENT.clients.connectStatusNeedsReconnect;
+  } else if (client.hasToken) {
+    statusEl.textContent = client.igUsername
+      ? fill(CONTENT.clients.connectStatusConnected, { username: client.igUsername })
+      : CONTENT.clients.connectStatusConnectedNoUsername;
+  } else if (client.connectTokenExpiresAt && new Date(client.connectTokenExpiresAt) > new Date()) {
+    statusEl.textContent = fill(CONTENT.clients.connectStatusPendingLink, { time: fmtShort(client.connectTokenExpiresAt) });
+  } else {
+    statusEl.textContent = CONTENT.clients.connectStatusNone;
+  }
+}
+document.getElementById('generateConnectLinkBtn').addEventListener('click', async () => {
+  try {
+    const { url, expiresAt } = await api(`/clients/${state.currentClientId}/connect-link`, { method: 'POST' });
+    document.getElementById('connectLinkInput').value = url;
+    document.getElementById('connectLinkNote').textContent = fill(CONTENT.clients.linkExpiryNote, { time: fmtShort(expiresAt) });
+    document.getElementById('connectLinkBox').style.display = ''; // falls back to the CSS default (block)
+    document.getElementById('connectStatus').textContent = fill(CONTENT.clients.connectStatusPendingLink, { time: fmtShort(expiresAt) });
+  } catch (err) {
+    showAlert(CONTENT.clients.connectLinkFailedWarning);
+  }
+});
+document.getElementById('copyConnectLinkBtn').addEventListener('click', async () => {
+  const input = document.getElementById('connectLinkInput');
+  try {
+    await navigator.clipboard.writeText(input.value);
+  } catch {
+    input.select();
+    document.execCommand('copy'); // fallback if the Clipboard API is unavailable (e.g. not on HTTPS)
+  }
+  showToast(CONTENT.clients.linkCopiedToast, null);
+});
 document.getElementById('saveClientEditBtn').addEventListener('click', async () => {
   const name = document.getElementById('editClientName').value.trim();
   if (!name) { showAlert(CONTENT.clients.missingNameWarning); return; }

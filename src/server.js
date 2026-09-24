@@ -14,7 +14,8 @@ const albumsRouter = require('./routes/albums');
 const videosRouter = require('./routes/videos');
 const settingsRouter = require('./routes/settings');
 const webhookRouter = require('./routes/webhook');
-const { autoStopEndedAlbums, purgeExpiredDeletions } = require('./services/capture');
+const connectRouter = require('./routes/connect');
+const { autoStopEndedAlbums, purgeExpiredDeletions, refreshExpiringTokens } = require('./services/capture');
 const db = require('./services/db');
 
 const app = express();
@@ -30,6 +31,12 @@ app.use(express.json({
 // directly. It's verified by its own signature check instead - see
 // routes/webhook.js. Mounted before the /api auth middleware deliberately.
 app.use('/', webhookRouter);
+
+// The "Connect via Instagram" link, its callback, and Meta's deauthorize
+// notice are all reached by browsers/servers with no ClipCatch login -
+// same reasoning as the webhook above. Public by route, not by data: each
+// one relies on its own single-use token or signature instead.
+app.use('/', connectRouter.publicRouter);
 
 // The login page needs the logo before anyone has actually logged in, so
 // this one small piece of settings is deliberately public - nothing else
@@ -77,6 +84,7 @@ app.use('/api', clientsRouter);
 app.use('/api', albumsRouter);
 app.use('/api', videosRouter);
 app.use('/api', settingsRouter);
+app.use('/api', connectRouter);
 
 // Auto-stop any captures whose end time has just passed. Capturing itself
 // happens live via the webhook, not on a timer - see services/capture.js.
@@ -88,6 +96,11 @@ cron.schedule('* * * * *', () => {
 // Once a day is plenty - there's no urgency to the minute for this one.
 cron.schedule('0 3 * * *', () => {
   purgeExpiredDeletions().catch(err => console.error('Purge cycle error:', err));
+});
+
+// Refresh any connected account's token before its 60-day clock runs out.
+cron.schedule('0 4 * * *', () => {
+  refreshExpiringTokens().catch(err => console.error('Token refresh cycle error:', err));
 });
 
 const PORT = process.env.PORT || 3000;

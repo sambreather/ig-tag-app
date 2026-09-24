@@ -10,6 +10,7 @@
 
 const db = require('./db');
 const storage = require('./storage');
+const instagramAuth = require('./instagramAuth');
 
 // Anything soft-deleted more than 30 days ago gets permanently removed -
 // both from B2 storage and from our own records. Runs once a day.
@@ -85,4 +86,49 @@ async function autoStopEndedAlbums() {
   }
 }
 
-module.exports = { autoStopEndedAlbums, purgeExpiredDeletions };
+// Connected accounts' tokens last 60 days and don't renew themselves.
+// Refreshes any that are getting close to expiring, so nobody has to
+// notice a client has gone quiet and reconnect it by hand. Runs once a
+// day; refreshing this far ahead of the real 60-day expiry comfortably
+// clears the "must be at least 24h old" rule Instagram's refresh endpoint
+// requires.
+const REFRESH_WITHIN_MS = 10 * 24 * 60 * 60 * 1000;
+async function refreshExpiringTokens() {
+  try {
+    const cutoff = Date.now() + REFRESH_WITHIN_MS;
+    const snapshot = db.load();
+    const refreshed = new Map(); // clientId -> { accessToken, tokenExpiresAt }
+    const needsReconnect = new Set(); // clientId -> the refresh itself failed
+
+    for (const client of snapshot.clients) {
+      if (!client.accessToken || !client.tokenExpiresAt) continue;
+      if (new Date(client.tokenExpiresAt).getTime() > cutoff) continue; // not due yet
+      try {
+        const { accessToken, expiresInSeconds } = await instagramAuth.refreshLongLivedToken(client.accessToken);
+        refreshed.set(client.id, { accessToken, tokenExpiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString() });
+      } catch (err) {
+        // Most likely the account owner revoked access, or the token
+        // already expired unnoticed - either way, only reconnecting (a
+        // fresh link) can fix it, so just flag it rather than retrying
+        // forever with the same broken token.
+        console.error(`Failed to refresh the token for client ${client.id} - flagging for reconnect:`, err.response?.data || err.message);
+        needsReconnect.add(client.id);
+      }
+    }
+
+    if (refreshed.size === 0 && needsReconnect.size === 0) return;
+
+    // Re-load right before saving and apply only this run's own changes -
+    // same reasoning as every other background job here.
+    const fresh = db.load();
+    for (const client of fresh.clients) {
+      if (refreshed.has(client.id)) Object.assign(client, refreshed.get(client.id));
+      if (needsReconnect.has(client.id)) client.tokenNeedsReconnect = true;
+    }
+    db.save(fresh);
+  } catch (err) {
+    console.error('refreshExpiringTokens failed entirely:', err);
+  }
+}
+
+module.exports = { autoStopEndedAlbums, purgeExpiredDeletions, refreshExpiringTokens };

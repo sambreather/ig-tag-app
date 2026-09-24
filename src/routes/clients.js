@@ -7,8 +7,12 @@ const storage = require('../services/storage');
 // open to every logged-in user - including the team login, which is shared
 // with colleagues. So the token itself never goes to the browser; the admin
 // edit screen only needs to know whether one is saved.
+// The single-use "connect via Instagram" link token is the same kind of
+// credential (whoever has it can complete the connection), so it's
+// stripped here too - connectTokenExpiresAt stays, so the admin UI can
+// show a pending link is still valid without needing the token itself.
 function publicClient(client) {
-  const { accessToken, ...rest } = client;
+  const { accessToken, connectToken, ...rest } = client;
   return { ...rest, hasToken: !!accessToken };
 }
 
@@ -65,13 +69,6 @@ router.delete('/clients/:clientId', (req, res) => {
 router.get('/storage-usage', async (req, res) => {
   const bytes = await storage.getTotalStorageBytes();
   res.json({ bytes, gb: (bytes / (1024 ** 3)).toFixed(2) });
-});
-
-// NOTE: the real "Connect account" OAuth flow (Instagram Business Login)
-// gets wired up here once the app has a live URL for Meta to redirect back
-// to - see /docs/meta-setup-notes.md for what's already done on Meta's side.
-router.get('/clients/:clientId/connect', (req, res) => {
-  res.status(501).json({ note: 'OAuth connect flow to be wired up once the app is deployed with a public URL.' });
 });
 
 module.exports = router;
