@@ -22,6 +22,9 @@ const ICONS = {
   grid: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
   'grid-large': '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>',
   restore: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
+  volume: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7"/><path d="M18.5 5.5a9 9 0 010 13"/></svg>',
+  'volume-mute': '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M17 9l6 6M23 9l-6 6"/></svg>',
+  fullscreen: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>',
 };
 
 // Finds every <i class="icon-xxx"> inside the given root (or the whole
@@ -854,11 +857,18 @@ function renderPreview() {
   const videoEl = document.getElementById('previewVideoEl');
   const imageEl = document.getElementById('previewImageEl');
   const playBtn = document.getElementById('previewPlayBtn');
+  const videoControls = document.getElementById('previewVideoControls');
+  const seek = document.getElementById('previewSeek');
   const isPhoto = v.type === 'photo';
   videoEl.style.display = isPhoto ? 'none' : '';
   imageEl.style.display = isPhoto ? '' : 'none';
   videoEl.pause();
   playBtn.style.display = isPhoto ? 'none' : 'flex'; // a fresh video always starts paused
+  videoControls.style.display = isPhoto ? 'none' : '';
+  seek.value = 0;
+  seek.style.setProperty('--progress', '0%');
+  document.getElementById('previewTimeDisplay').textContent = '0:00 / 0:00';
+  if (!isPhoto) showVideoControls(false); // paused state - stay visible, no auto-hide
   api(`/videos/${v.id}/download-url`).then(({ url }) => {
     if (isPhoto) imageEl.src = url; else videoEl.src = url;
   });
@@ -879,6 +889,77 @@ document.getElementById('previewVideoEl').addEventListener('play', () => {
       document.getElementById('previewPlayBtn').style.display = 'flex';
     }
   });
+});
+
+// --- Video scrubber / controls bar ---
+// "0:09" not "0:00:09" - these are short Story clips, never long enough
+// to need an hours place.
+function formatPlaybackTime(seconds) {
+  if (!isFinite(seconds) || seconds < 0) seconds = 0;
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+let controlsHideTimer = null;
+// autoHide: true while playing (fades out after a couple of seconds of no
+// interaction, like any video player); false while paused, so the
+// scrubber stays put - matters most on a phone, which has no hover to
+// bring it back.
+function showVideoControls(autoHide) {
+  const controls = document.getElementById('previewVideoControls');
+  if (controls.style.display === 'none') return; // photo - nothing to show
+  controls.classList.add('visible');
+  clearTimeout(controlsHideTimer);
+  if (autoHide) {
+    controlsHideTimer = setTimeout(() => controls.classList.remove('visible'), 2500);
+  }
+}
+
+const previewVideoEl = document.getElementById('previewVideoEl');
+const previewSeek = document.getElementById('previewSeek');
+
+previewVideoEl.addEventListener('loadedmetadata', () => {
+  previewSeek.max = previewVideoEl.duration || 0;
+  document.getElementById('previewTimeDisplay').textContent =
+    `0:00 / ${formatPlaybackTime(previewVideoEl.duration)}`;
+});
+previewVideoEl.addEventListener('timeupdate', () => {
+  if (!previewVideoEl.duration) return;
+  previewSeek.value = previewVideoEl.currentTime;
+  previewSeek.style.setProperty('--progress', `${(previewVideoEl.currentTime / previewVideoEl.duration) * 100}%`);
+  document.getElementById('previewTimeDisplay').textContent =
+    `${formatPlaybackTime(previewVideoEl.currentTime)} / ${formatPlaybackTime(previewVideoEl.duration)}`;
+});
+previewSeek.addEventListener('input', () => {
+  previewVideoEl.currentTime = previewSeek.value;
+  showVideoControls(!previewVideoEl.paused);
+});
+// Clicking anywhere on the video toggles play/pause - except the controls
+// bar overlaid on the bottom, which sits on top and catches its own
+// clicks first, so this never fires for those.
+previewVideoEl.addEventListener('click', () => {
+  if (previewVideoEl.paused) previewVideoEl.play(); else previewVideoEl.pause();
+});
+previewVideoEl.addEventListener('play', () => showVideoControls(true));
+['pause', 'ended'].forEach(evt => previewVideoEl.addEventListener(evt, () => showVideoControls(false)));
+// Reveals the controls bar on touch/mouse activity - mainly for touch,
+// which has no CSS :hover to fall back on.
+document.getElementById('previewMediaWrap').addEventListener('mousemove', () => showVideoControls(!previewVideoEl.paused));
+document.getElementById('previewMediaWrap').addEventListener('touchstart', () => showVideoControls(!previewVideoEl.paused));
+
+document.getElementById('previewMuteBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  previewVideoEl.muted = !previewVideoEl.muted;
+  const btn = document.getElementById('previewMuteBtn');
+  btn.innerHTML = `<i class="icon-${previewVideoEl.muted ? 'volume-mute' : 'volume'}"></i>`;
+  renderIcons(btn);
+});
+document.getElementById('previewFullscreenBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  const wrap = document.getElementById('previewMediaWrap');
+  if (document.fullscreenElement) document.exitFullscreen();
+  else wrap.requestFullscreen?.().catch(() => {}); // some browsers/embeds refuse it - fine either way
 });
 function navPreview(dir) {
   const len = currentPreviewList().length;
