@@ -163,6 +163,33 @@ async function api(path, opts = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+// Triggers a real browser "save as" for a URL, rather than navigating to
+// it - window.open() on a plain URL just opens/plays the file in a new
+// tab instead of downloading it, since B2 doesn't send a download-style
+// header unless the signed URL explicitly asks for one (see the
+// ?download=1 links this is used with).
+function triggerDownload(url, filename) {
+  const a = document.createElement('a');
+  a.href = url;
+  if (filename) a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+// Same idea, but for a route on our own server that needs our login
+// header - window.open() (or a plain link) can't attach that header, so
+// the browser gets rejected with "Not authenticated". Fetches it
+// ourselves instead and downloads the result as a local file.
+async function downloadFile(path, filename) {
+  const res = await fetch(`/api${path}`, { headers: { Authorization: state.authHeader } });
+  if (res.status === 401) { showLogin(); throw new Error('Not authenticated'); }
+  if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+  const blobUrl = URL.createObjectURL(await res.blob());
+  triggerDownload(blobUrl, filename);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+}
+
 document.getElementById('logoutLink').addEventListener('click', () => {
   localStorage.removeItem('authHeader');
   localStorage.removeItem('isAdmin');
@@ -741,8 +768,8 @@ function renderGrid() {
   grid.querySelectorAll('[data-dl]').forEach(el => el.addEventListener('click', async e => {
     e.stopPropagation();
     const v = state.videos[el.dataset.dl];
-    const { url } = await api(`/videos/${v.id}/download-url`);
-    window.open(url, '_blank');
+    const { url } = await api(`/videos/${v.id}/download-url?download=1`);
+    triggerDownload(url);
   }));
   updateActionButtons();
   renderIcons(grid);
@@ -783,7 +810,12 @@ async function deleteSingle(idx) {
 document.getElementById('downloadStarredBtn').addEventListener('click', () => {
   const count = state.videos.filter(v => v.mark === 'save').length;
   showConfirm(fill(CONTENT.videos.downloadStarredConfirm, { count }), () => {
-    window.open(`/api/albums/${state.currentAlbumId}/download-starred-zip`, '_blank');
+    // This is our own /api route, which needs our login header - a plain
+    // window.open() can't attach that, so the server was rejecting it
+    // with "Not authenticated". downloadFile() fetches it properly
+    // instead (see its definition, by the api() helper, for why).
+    downloadFile(`/albums/${state.currentAlbumId}/download-starred-zip`, 'starred-videos.zip')
+      .catch(() => showToast(CONTENT.videos.downloadFailedToast, null));
   });
 });
 document.getElementById('deleteMarkedBtn').addEventListener('click', () => {
@@ -981,6 +1013,11 @@ document.getElementById('previewStarBtn').addEventListener('click', async () => 
   renderGrid();
 });
 document.getElementById('previewTrashBtn').addEventListener('click', () => { const idx = state.previewIdx; closePreview(); deleteSingle(idx); });
+document.getElementById('previewDlBtn').addEventListener('click', async () => {
+  const v = currentPreviewList()[state.previewIdx];
+  const { url } = await api(`/videos/${v.id}/download-url?download=1`);
+  triggerDownload(url);
+});
 document.getElementById('previewRestoreBtn').addEventListener('click', async () => {
   const v = state.deletedVideos[state.previewIdx];
   await api(`/videos/${v.id}/restore`, { method: 'POST' });

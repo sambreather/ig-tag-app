@@ -48,12 +48,19 @@ router.post('/videos/:videoId/restore', async (req, res) => {
   res.json(video);
 });
 
-// Get a direct, time-limited download link for one video.
+// Get a direct, time-limited link for one video. Also used to stream the
+// file into the preview modal/thumbnails, so it only forces an actual
+// download (rather than playing/opening it inline) when asked with
+// ?download=1 - the real download buttons ask for that; the preview
+// modal's own use of this route does not.
 router.get('/videos/:videoId/download-url', (req, res) => {
   const data = db.load();
   const video = data.videos.find(v => v.id === req.params.videoId);
   if (!video) return res.status(404).json({ error: 'Video not found' });
-  res.json({ url: storage.getSignedDownloadUrl(video.storageKey) });
+  const filename = req.query.download
+    ? `${video.tagger}_${video.timestamp.slice(0, 10)}.${video.type === 'video' ? 'mp4' : 'jpg'}`
+    : undefined;
+  res.json({ url: storage.getSignedDownloadUrl(video.storageKey, 300, filename) });
 });
 
 // Download all "starred" (mark='save') videos in an album as a single .zip.

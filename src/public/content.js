@@ -93,6 +93,7 @@ const CONTENT = {
     deleteMarkedConfirm: 'You\u2019re about to delete {count} files. Are you sure?',
     deleteSingleToast: '1 file deleted.',
     deleteMultipleToast: '{count} files deleted.',
+    downloadFailedToast: 'Download failed. Please try again.',
     albumDeletedToast: 'Capture deleted.',
     undoLink: 'Undo',
   },

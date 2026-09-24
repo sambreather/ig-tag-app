@@ -64,9 +64,19 @@ async function getTotalStorageBytes() {
   return total;
 }
 
-/** Generates a temporary signed URL so a browser can download a file directly from B2. */
-function getSignedDownloadUrl(key, expiresInSeconds = 300) {
-  return s3.getSignedUrl('getObject', { Bucket: BUCKET, Key: key, Expires: expiresInSeconds });
+/**
+ * Generates a temporary signed URL so a browser can fetch a file directly
+ * from B2. Pass downloadFilename to make the browser save it as a file
+ * under that name instead of opening/playing it inline - used for the
+ * actual download buttons. Left out (as most callers do) for the preview
+ * modal and thumbnails, which need the file to render inline instead.
+ */
+function getSignedDownloadUrl(key, expiresInSeconds = 300, downloadFilename) {
+  const params = { Bucket: BUCKET, Key: key, Expires: expiresInSeconds };
+  if (downloadFilename) {
+    params.ResponseContentDisposition = `attachment; filename="${downloadFilename.replace(/"/g, '')}"`;
+  }
+  return s3.getSignedUrl('getObject', params);
 }
 
 module.exports = {
