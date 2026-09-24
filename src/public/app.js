@@ -456,7 +456,12 @@ document.getElementById('editClientBtn').addEventListener('click', () => {
   if (!client) return;
   document.getElementById('editClientName').value = client.name || '';
   document.getElementById('editClientIgId').value = client.igUserId || '';
-  document.getElementById('editClientToken').value = client.accessToken || '';
+  // The server never sends the saved token (see publicClient in
+  // routes/clients.js), so this starts empty - the placeholder just says
+  // whether one is already saved.
+  const tokenInput = document.getElementById('editClientToken');
+  tokenInput.value = '';
+  tokenInput.placeholder = client.hasToken ? CONTENT.clients.tokenSavedPlaceholder : CONTENT.clients.tokenPlaceholder;
   showScreen('editClientView');
 });
 document.getElementById('backFromEditClientBtn').addEventListener('click', () => showScreen('albumsView'));
@@ -464,14 +469,13 @@ document.getElementById('saveClientEditBtn').addEventListener('click', async () 
   const name = document.getElementById('editClientName').value.trim();
   if (!name) { showAlert(CONTENT.clients.missingNameWarning); return; }
   try {
-    await api(`/clients/${state.currentClientId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        name,
-        igUserId: document.getElementById('editClientIgId').value.trim(),
-        accessToken: document.getElementById('editClientToken').value.trim(),
-      }),
-    });
+    const body = {
+      name,
+      igUserId: document.getElementById('editClientIgId').value.trim(),
+    };
+    const newToken = document.getElementById('editClientToken').value.trim();
+    if (newToken) body.accessToken = newToken; // blank = keep the saved one
+    await api(`/clients/${state.currentClientId}`, { method: 'PATCH', body: JSON.stringify(body) });
     await startApp();
     showToast(CONTENT.clients.savedToast, null);
   } catch (err) {

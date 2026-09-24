@@ -66,6 +66,7 @@ const CONTENT = {
     igIdPlaceholder: 'From Meta\u2019s dashboard',
     tokenLabel: 'Access token',
     tokenPlaceholder: 'Generated in Meta\u2019s developer dashboard',
+    tokenSavedPlaceholder: 'A token is saved. Paste a new one here to replace it.',
     addButton: 'Add client',
     editHeading: 'Edit client',
     saveButton: 'Save changes',
