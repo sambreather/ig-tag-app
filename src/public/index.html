@@ -32,7 +32,8 @@
       <div class="topbar-left">
         <img id="appLogo" class="app-logo" alt="" style="display:none;">
         <select id="clientSelect"></select>
-        <button id="editClientBtn" class="icon-btn admin-only" aria-label="Edit client details"><i class="icon-settings"></i></button>
+        <button id="editClientBtn" class="icon-btn admin-only" aria-label="Edit artist details"><i class="icon-settings"></i></button>
+        <button id="addClientIconBtn" class="icon-btn admin-only" aria-label="Add artist"><i class="icon-plus"></i></button>
       </div>
       <button id="newAlbumBtn" class="btn-plain"><i class="icon-plus icon-green"></i><span>New album</span></button>
     </div>
@@ -62,9 +63,9 @@
     <div id="editClientView" style="display:none;">
       <div class="form-header">
         <button id="backFromEditClientBtn" class="icon-btn"><i class="icon-back"></i></button>
-        <div class="screen-title">Edit client</div>
+        <div class="screen-title">Edit artist</div>
       </div>
-      <label>Client name</label>
+      <label>Artist name</label>
       <input id="editClientName" type="text">
 
       <label id="connectLabel">Instagram connection</label>
@@ -82,18 +83,23 @@
       <label id="editClientTokenLabel">Access token</label>
       <input id="editClientToken" type="text">
       <button id="saveClientEditBtn" class="btn-primary" style="margin-top:16px;">Save changes</button>
-      <button id="deleteClientBtn" class="btn-outline-red" style="margin-top:16px; margin-left:8px;">Delete client</button>
+      <button id="deleteClientBtn" class="btn-outline-red" style="margin-top:16px; margin-left:8px;">Delete artist</button>
     </div>
 
     <div id="noClientsView" style="display:none;">
-      <div class="screen-title" style="margin-bottom:14px;">Add your first client</div>
-      <label>Client name</label>
+      <div class="form-header">
+        <button id="backFromAddClientBtn" class="icon-btn"><i class="icon-back"></i></button>
+        <div id="addClientHeading" class="screen-title">Add your first artist</div>
+      </div>
+      <label id="newClientNameLabel">Artist name</label>
       <input id="newClientName" type="text" placeholder="e.g. Olivia Dean">
-      <label>Instagram Business account ID</label>
-      <input id="newClientIgId" type="text" placeholder="From Meta's dashboard">
-      <label>Access token</label>
-      <input id="newClientToken" type="text" placeholder="Generated in Meta's developer dashboard">
-      <button id="addClientBtn" class="btn-primary" style="margin-top:16px;">Add client</button>
+      <div style="margin-top:16px;"><button id="addConnectBtn" class="btn-outline-green">Connect via Instagram</button></div>
+      <div id="addConnectLinkBox" style="display:none; margin-top:8px;">
+        <input id="addConnectLinkInput" type="text" readonly>
+        <button id="addCopyConnectLinkBtn" class="btn-small" style="margin-top:6px;">Copy link</button>
+        <div id="addConnectLinkNote" class="meta-text" style="margin-top:4px;"></div>
+      </div>
+      <button id="addClientBtn" class="btn-primary" style="margin-top:16px;">Add artist</button>
     </div>
 
     <div id="albumsView">

@@ -123,16 +123,14 @@ function applyContent() {
   document.getElementById('previewRestoreBtn').textContent = CONTENT.deletedFiles.restoreButton;
   document.querySelector('#deletedView .meta-text').textContent = CONTENT.deletedFiles.retentionNote;
 
-  document.querySelector('#noClientsView .screen-title').textContent = CONTENT.clients.addFirstClientHeading;
+  document.getElementById('addClientHeading').textContent = state.clients.length ? CONTENT.clients.addHeading : CONTENT.clients.addFirstClientHeading;
   document.getElementById('newClientName').placeholder = CONTENT.clients.namePlaceholder;
-  document.getElementById('newClientIgId').placeholder = CONTENT.clients.igIdPlaceholder;
-  document.getElementById('newClientToken').placeholder = CONTENT.clients.tokenPlaceholder;
   document.getElementById('addClientBtn').textContent = CONTENT.clients.addButton;
+  document.getElementById('addConnectBtn').textContent = CONTENT.clients.connectButton;
+  document.getElementById('addCopyConnectLinkBtn').textContent = CONTENT.clients.copyLinkButton;
   document.querySelector('#editClientView .screen-title').textContent = CONTENT.clients.editHeading;
   document.getElementById('saveClientEditBtn').textContent = CONTENT.clients.saveButton;
-  document.querySelectorAll('#noClientsView label')[0].textContent = CONTENT.clients.nameLabel;
-  document.querySelectorAll('#noClientsView label')[1].textContent = CONTENT.clients.igIdLabel;
-  document.querySelectorAll('#noClientsView label')[2].textContent = CONTENT.clients.tokenLabel;
+  document.getElementById('newClientNameLabel').textContent = CONTENT.clients.nameLabel;
   document.querySelectorAll('#editClientView label')[0].textContent = CONTENT.clients.nameLabel;
   // These two used to be found by position (label[1], label[2]) - broke the
   // moment the connect-flow section above added new labels in between, so
@@ -265,10 +263,11 @@ async function startApp() {
     showAlbums(state.clients[0].id);
   } else if (state.isAdmin) {
     // Only an admin can actually add clients, so show the add-client screen.
-    showScreen('noClientsView');
+    // Nothing to go back to yet, so no back button.
+    showAddClient(false);
   } else {
     showScreen('albumsView');
-    document.getElementById('albumList').innerHTML = '<div class="meta-text">No clients set up yet.</div>';
+    document.getElementById('albumList').innerHTML = '<div class="meta-text">No artists set up yet.</div>';
   }
 }
 
@@ -333,6 +332,7 @@ function humaniseKey(key) {
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, c => c.toUpperCase())
     .toLowerCase()
+    .replace(/client/g, 'artist') // this app calls them artists everywhere
     .replace(/^./, c => c.toUpperCase());
 }
 
@@ -444,14 +444,74 @@ document.getElementById('deleteClientBtn').addEventListener('click', () => {
   });
 });
 
+// The client this screen has created so far. Connecting needs a saved client
+// to attach the link to, so the first click of "Connect via Instagram" (or of
+// "Add client") saves it; anything after that reuses it, renaming if the name
+// was changed, so nothing is ever created twice.
+let newClient = null;
+
+function showAddClient(canGoBack) {
+  newClient = null;
+  document.getElementById('newClientName').value = '';
+  document.getElementById('addConnectLinkBox').style.display = 'none';
+  document.getElementById('addClientBtn').textContent = CONTENT.clients.addButton;
+  document.getElementById('backFromAddClientBtn').style.display = canGoBack ? '' : 'none';
+  document.getElementById('addClientHeading').textContent = canGoBack ? CONTENT.clients.addHeading : CONTENT.clients.addFirstClientHeading;
+  showScreen('noClientsView');
+}
+
+async function ensureNewClient(name) {
+  if (!newClient) {
+    const created = await api('/clients', { method: 'POST', body: JSON.stringify({ name }) });
+    newClient = { id: created.id, name };
+  } else if (newClient.name !== name) {
+    await api(`/clients/${newClient.id}`, { method: 'PATCH', body: JSON.stringify({ name }) });
+    newClient.name = name;
+  }
+  return newClient.id;
+}
+
+// Leaves the add screen for the new client's own page (reloading the client
+// list first so it shows up in the dropdown).
+async function finishAddClient(id) {
+  newClient = null;
+  await startApp();
+  await showAlbums(id);
+}
+
+document.getElementById('addClientIconBtn').addEventListener('click', () => showAddClient(true));
+document.getElementById('backFromAddClientBtn').addEventListener('click', async () => {
+  if (newClient) await finishAddClient(newClient.id); // already saved by "Connect" - keep it, don't lose it
+  else showScreen('albumsView');
+});
+
+document.getElementById('addConnectBtn').addEventListener('click', async () => {
+  const name = document.getElementById('newClientName').value.trim();
+  if (!name) { showAlert(CONTENT.clients.connectNeedsNameWarning); return; }
+  let id;
+  try {
+    id = await ensureNewClient(name);
+  } catch (err) {
+    showAlert(CONTENT.clients.addFailedWarning);
+    return;
+  }
+  try {
+    const { url, expiresAt } = await api(`/clients/${id}/connect-link`, { method: 'POST' });
+    document.getElementById('addConnectLinkInput').value = url;
+    document.getElementById('addConnectLinkNote').textContent = fill(CONTENT.clients.linkExpiryNote, { time: fmtShort(expiresAt) });
+    document.getElementById('addConnectLinkBox').style.display = '';
+    document.getElementById('addClientBtn').textContent = CONTENT.clients.doneButton;
+  } catch (err) {
+    showAlert(CONTENT.clients.connectLinkFailedWarning);
+  }
+});
+document.getElementById('addCopyConnectLinkBtn').addEventListener('click', () => copyLinkFrom('addConnectLinkInput'));
+
 document.getElementById('addClientBtn').addEventListener('click', async () => {
   const name = document.getElementById('newClientName').value.trim();
-  const igUserId = document.getElementById('newClientIgId').value.trim();
-  const accessToken = document.getElementById('newClientToken').value.trim();
   if (!name) { showAlert(CONTENT.clients.missingNameWarning); return; }
   try {
-    await api('/clients', { method: 'POST', body: JSON.stringify({ name, igUserId, accessToken }) });
-    startApp();
+    await finishAddClient(await ensureNewClient(name));
   } catch (err) {
     showAlert(CONTENT.clients.addFailedWarning);
   }
@@ -501,8 +561,8 @@ document.getElementById('generateConnectLinkBtn').addEventListener('click', asyn
     showAlert(CONTENT.clients.connectLinkFailedWarning);
   }
 });
-document.getElementById('copyConnectLinkBtn').addEventListener('click', async () => {
-  const input = document.getElementById('connectLinkInput');
+async function copyLinkFrom(inputId) {
+  const input = document.getElementById(inputId);
   try {
     await navigator.clipboard.writeText(input.value);
   } catch {
@@ -510,7 +570,8 @@ document.getElementById('copyConnectLinkBtn').addEventListener('click', async ()
     document.execCommand('copy'); // fallback if the Clipboard API is unavailable (e.g. not on HTTPS)
   }
   showToast(CONTENT.clients.linkCopiedToast, null);
-});
+}
+document.getElementById('copyConnectLinkBtn').addEventListener('click', () => copyLinkFrom('connectLinkInput'));
 document.getElementById('saveClientEditBtn').addEventListener('click', async () => {
   const name = document.getElementById('editClientName').value.trim();
   if (!name) { showAlert(CONTENT.clients.missingNameWarning); return; }
