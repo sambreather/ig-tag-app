@@ -77,11 +77,13 @@
         <div id="connectLinkNote" class="meta-text" style="margin-top:4px;"></div>
       </div>
 
-      <label id="manualLabel" style="margin-top:16px;">Or enter manually</label>
-      <label id="editClientIgIdLabel">Instagram Business account ID</label>
-      <input id="editClientIgId" type="text">
-      <label id="editClientTokenLabel">Access token</label>
-      <input id="editClientToken" type="text">
+      <div style="margin-top:16px;"><span id="manualLabel" class="select-link">Or enter manually</span></div>
+      <div id="manualFields" style="display:none;">
+        <label id="editClientIgIdLabel">Instagram Business account ID</label>
+        <input id="editClientIgId" type="text">
+        <label id="editClientTokenLabel">Access token</label>
+        <input id="editClientToken" type="text">
+      </div>
       <button id="saveClientEditBtn" class="btn-primary" style="margin-top:16px;">Save changes</button>
       <button id="deleteClientBtn" class="btn-outline-red" style="margin-top:16px; margin-left:8px;">Delete artist</button>
     </div>

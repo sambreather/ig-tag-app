@@ -531,9 +531,15 @@ document.getElementById('editClientBtn').addEventListener('click', () => {
   tokenInput.value = '';
   tokenInput.placeholder = client.hasToken ? CONTENT.clients.tokenSavedPlaceholder : CONTENT.clients.tokenPlaceholder;
   renderConnectStatus(client);
+  document.getElementById('manualFields').style.display = 'none'; // manual entry stays tucked away until asked for
   showScreen('editClientView');
 });
 document.getElementById('backFromEditClientBtn').addEventListener('click', () => showScreen('albumsView'));
+
+document.getElementById('manualLabel').addEventListener('click', () => {
+  const fields = document.getElementById('manualFields');
+  fields.style.display = fields.style.display === 'none' ? '' : 'none';
+});
 
 function renderConnectStatus(client) {
   document.getElementById('connectLinkBox').style.display = 'none'; // fresh open - don't show a stale link from last time
