@@ -54,17 +54,30 @@ function linkExpired(client) {
   return !client.connectTokenExpiresAt || new Date(client.connectTokenExpiresAt).getTime() < Date.now();
 }
 
+const escapeHtml = str => String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Same logo the app's login screen shows (uploaded in Settings). Only an
+// actual image data URL is ever embedded; if none is set, the page just
+// shows the text on its own.
+function logoHtml() {
+  const url = (db.load().settings || {}).logoDataUrl;
+  return typeof url === 'string' && url.startsWith('data:image/')
+    ? `<img class="logo" src="${escapeHtml(url)}" alt="">`
+    : '';
+}
+
 function page(heading, sub, color) {
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ClipCatch</title>
 <style>
   body{background:#121212;color:#f2f1ee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center;padding:24px}
   .card{max-width:360px}
+  .logo{width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:16px}
   h1{font-size:18px;margin:0 0 8px;color:${color || '#f2f1ee'}}
   p{color:#a8a6a1;font-size:14px;margin:0}
-</style></head><body><div class="card"><h1>${heading}</h1><p>${sub}</p></div></body></html>`;
+</style></head><body><div class="card">${logoHtml()}<h1>${heading}</h1><p>${sub}</p></div></body></html>`;
 }
 const errorPage = msg => page(msg, 'Ask whoever sent you this link for a new one.');
-const successPage = name => page(`✓ ${name} is now connected`, 'You can close this window.', '#4ade80');
+const successPage = name => page(`✓ ${escapeHtml(name)} is now connected`, 'You can close this window.', '#4ade80');
 
 publicRouter.get('/connect/:token', (req, res) => {
   const data = db.load();
