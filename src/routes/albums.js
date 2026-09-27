@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../services/db');
 
 // List albums for a client, in the agreed order: Scheduled (soonest last),
-// then Capturing, then Done (most recent first).
+// then Capturing (most recently started first), then Done (most recent first).
 router.get('/clients/:clientId/albums', (req, res) => {
   const data = db.load();
   const albums = data.albums.filter(a => a.clientId === req.params.clientId && !a.deleted);
@@ -12,6 +12,7 @@ router.get('/clients/:clientId/albums', (req, res) => {
   albums.sort((a, b) => {
     if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
     if (a.status === 'scheduled') return new Date(b.start) - new Date(a.start); // furthest-out first
+    if (a.status === 'capturing') return new Date(b.start) - new Date(a.start); // most recently started first
     if (a.status === 'done') return new Date(b.end) - new Date(a.end); // most recent first
     return 0;
   });
