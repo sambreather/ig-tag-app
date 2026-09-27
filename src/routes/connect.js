@@ -97,16 +97,15 @@ function logRejectedToken(step, token, data) {
   console.error(`${step}: rejected token ${short(token)} - pending links: ${details.join('; ')}`);
 }
 
-publicRouter.get('/connect/:token', (req, res) => {
-  const data = db.load();
-  const client = findByConnectToken(data, req.params.token);
-  if (!client || linkExpired(client)) {
-    logRejectedToken('GET /connect/:token', req.params.token, data);
-    return res.status(410).send(errorPage('This link has expired or already been used'));
-  }
-  res.redirect(auth.buildAuthorizeUrl({ redirectUri: callbackUrl(), state: req.params.token }));
-});
-
+// /connect/callback MUST be registered before the /connect/:token route
+// below - Express matches routes in registration order, and :token matches
+// ANY single path segment, including the literal word "callback". With the
+// order reversed (as it was), every real callback from Instagram was being
+// swallowed by the :token route instead, which treated the word "callback"
+// itself as a token, found no match, and showed the expired-link page -
+// the actual callback code (the part that talks to Instagram and saves the
+// connection) never ran at all. Caught from a real end-to-end test: the log
+// line read "rejected token callback…", which is what gave this away.
 publicRouter.get('/connect/callback', async (req, res) => {
   const { code, state, error, error_reason: errorReason } = req.query;
   if (error) {
@@ -150,6 +149,16 @@ publicRouter.get('/connect/callback', async (req, res) => {
     console.error(`Connect flow failed for client ${client.id}:`, err.response?.data || err.message);
     res.send(errorPage('Something went wrong connecting - please ask for a new link'));
   }
+});
+
+publicRouter.get('/connect/:token', (req, res) => {
+  const data = db.load();
+  const client = findByConnectToken(data, req.params.token);
+  if (!client || linkExpired(client)) {
+    logRejectedToken('GET /connect/:token', req.params.token, data);
+    return res.status(410).send(errorPage('This link has expired or already been used'));
+  }
+  res.redirect(auth.buildAuthorizeUrl({ redirectUri: callbackUrl(), state: req.params.token }));
 });
 
 // Meta calls this if someone removes ClipCatch's access from their
