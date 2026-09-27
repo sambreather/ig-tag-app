@@ -17,7 +17,7 @@ const ICONS = {
   x: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
   settings: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>',
   trash: '<svg viewBox="1 0 22 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m4 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z"/></svg>',
-  ban: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="18.4" x2="18.4" y2="5.6"/></svg>',
+  ban: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="18.4" y1="18.4" x2="5.6" y2="5.6"/></svg>',
   play: '<svg viewBox="0 0 24 24" width="44" height="44" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></svg>',
   'video-badge': '<svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="11" fill="#fff"/><path d="M10 8.2v7.6l6-3.8z" fill="var(--bg)"/></svg>',
   grid: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
@@ -1028,6 +1028,7 @@ function openPreview(idx) {
   document.getElementById('previewHintRow').style.display = 'block';
   renderPreview();
   document.getElementById('previewModal').style.display = 'flex';
+  syncPreviewCardWidth();
 }
 // Same modal, opened from Deleted Files: no save/delete marking (nothing
 // to mark on an already-deleted item), just a Restore button, but still
@@ -1039,6 +1040,7 @@ function openDeletedPreview(idx) {
   document.getElementById('previewHintRow').style.display = 'none';
   renderPreview();
   document.getElementById('previewModal').style.display = 'flex';
+  syncPreviewCardWidth();
 }
 function currentPreviewList() { return state.previewMode === 'grid' ? state.videos : state.deletedVideos; }
 // Modal equivalent of the grid's syncCardButtons - one mark, so starring
@@ -1149,11 +1151,29 @@ const previewSeek = document.getElementById('previewSeek');
 // Keeps #previewCard's width matched to the media wrap's own (correctly
 // 9:16-shaped) rendered width - see the long comment by #previewCard in
 // styles.css for why this has to be done here rather than in CSS alone.
-// Set up once; ResizeObserver keeps it in sync on its own from here,
-// including the very first size it settles on.
-new ResizeObserver(entries => {
-  document.getElementById('previewCard').style.width = `${entries[0].contentRect.width}px`;
-}).observe(document.getElementById('previewMediaWrap'));
+//
+// The card's padding and border have to be added back on top of the
+// wrap's own width here, not just copied straight across - box-sizing:
+// border-box (set globally) means a plain width assignment eats the
+// card's own padding/border out of that same number, leaving the wrap
+// less room than it actually needs. Left as a plain copy, that fed back
+// into the wrap's own size, converging on a card barely wider than the
+// media - squeezing the padding down until the save/"do not use" border
+// sat almost flush against the image, effectively invisible.
+function syncPreviewCardWidth() {
+  const card = document.getElementById('previewCard');
+  const wrapWidth = document.getElementById('previewMediaWrap').getBoundingClientRect().width;
+  const cs = getComputedStyle(card);
+  const chrome = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+  card.style.width = `${wrapWidth + chrome}px`;
+}
+// The observer covers ongoing changes (window resize, browser zoom); it
+// doesn't reliably fire its very first notification for an element that
+// started out under display:none (as the wrap does, inside the modal,
+// before it's ever opened) in every browser, so openPreview/
+// openDeletedPreview also call syncPreviewCardWidth() directly right after
+// showing the modal, rather than depending on the observer for that.
+new ResizeObserver(syncPreviewCardWidth).observe(document.getElementById('previewMediaWrap'));
 
 previewVideoEl.addEventListener('loadedmetadata', () => {
   previewSeek.max = previewVideoEl.duration || 0;
