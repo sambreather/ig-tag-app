@@ -1265,17 +1265,18 @@ document.getElementById('closePreview').addEventListener('click', closePreview);
 document.getElementById('previewModal').addEventListener('click', e => { if (e.target.id === 'previewModal') closePreview(); });
 document.getElementById('previewCard').addEventListener('click', e => e.stopPropagation());
 
-async function markCurrentAndAdvance(mark) {
+// No auto-advance anywhere any more (this used to move on to the next item
+// - a leftover from an earlier, more automatic review mode). S/D just set
+// the current item's mark and stay put, same as clicking the star/"do not
+// use" buttons does (those toggle on a second press; these don't, matching
+// how S/D worked before, just without the advance).
+async function markCurrent(mark) {
   if (state.previewMode !== 'grid') return;
   const v = state.videos[state.previewIdx];
   v.mark = mark;
-  // Same as the star button: only navPreview() (moving to a genuinely
-  // different item) should reset the video/image - staying on the same
-  // item just needs these bits updated directly.
   syncPreviewButtons(v);
   await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark }) });
   renderGrid();
-  if (state.previewIdx < state.videos.length - 1) navPreview('next');
 }
 document.addEventListener('keydown', e => {
   if (!state.modalOpen) return;
@@ -1288,8 +1289,8 @@ document.addEventListener('keydown', e => {
   else if (e.key === ' ') { e.preventDefault(); if (video.style.display !== 'none') video.paused ? video.play() : video.pause(); }
   else if (e.key === 'ArrowLeft') { if (video.style.display !== 'none') video.currentTime = Math.max(0, video.currentTime - 5); }
   else if (e.key === 'ArrowRight') { if (video.style.display !== 'none') video.currentTime += 5; }
-  else if (state.previewMode === 'grid' && k === 's') markCurrentAndAdvance('save');
-  else if (state.previewMode === 'grid' && k === 'd') markCurrentAndAdvance('delete');
+  else if (state.previewMode === 'grid' && k === 's') markCurrent('save');
+  else if (state.previewMode === 'grid' && k === 'd') markCurrent('delete');
 });
 
 // --- Deleted files ---
