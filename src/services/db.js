@@ -30,6 +30,9 @@ const RENAMED_WORDING = {
     savedToast: ['Client saved.', 'Artist saved.'],
     linkExpiryNote: ['Works once, for whoever opens it next. Expires {time}.', 'Works once, for whoever opens it next.'],
   },
+  preview: {
+    hintRow: ['Space: Play/Pause · ←→: Scrub 5s · ↑↓: Prev/Next · S: Save · D: Delete', 'Space: Play/Pause · ←→: Scrub 5s · ↑↓: Prev/Next · S: Save · D: Do Not Use'],
+  },
 };
 function migrateWording(content) {
   for (const [section, keys] of Object.entries(RENAMED_WORDING)) {

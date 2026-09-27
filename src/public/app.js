@@ -17,6 +17,7 @@ const ICONS = {
   x: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
   settings: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>',
   trash: '<svg viewBox="1 0 22 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m4 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z"/></svg>',
+  ban: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="18.4" x2="18.4" y2="5.6"/></svg>',
   play: '<svg viewBox="0 0 24 24" width="44" height="44" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></svg>',
   'video-badge': '<svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="11" fill="#fff"/><path d="M10 8.2v7.6l6-3.8z" fill="var(--bg)"/></svg>',
   grid: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
@@ -888,6 +889,7 @@ function renderGrid() {
         <div class="card-actions">
           <button data-dl="${idx}" aria-label="Download"><i class="icon-download"></i></button>
           <button data-star="${idx}" class="${v.mark==='save'?'active':''}" aria-label="Toggle starred"><i class="icon-star"></i></button>
+          <button data-nouse="${idx}" class="${v.mark==='delete'?'marked':''}" aria-label="Toggle do not use"><i class="icon-ban"></i></button>
           <button data-trash="${idx}" aria-label="Delete"><i class="icon-trash"></i></button>
         </div>
       </div>
@@ -898,12 +900,19 @@ function renderGrid() {
     e.stopPropagation();
     const v = state.videos[el.dataset.star];
     v.mark = v.mark === 'save' ? null : 'save';
-    // Update just this card's classes rather than rebuilding the whole
-    // grid - a full re-render recreates every <video> element from
-    // scratch, which briefly flickers/reloads them (photos don't show
-    // this, since an <img> just repaints instantly from cache).
-    el.closest('.video-card').className = 'video-card ' + (v.mark || '');
-    el.classList.toggle('active', v.mark === 'save');
+    syncCardButtons(el.closest('.video-card'), v);
+    updateActionButtons();
+    await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: v.mark }) });
+  }));
+  // "Do not use" - flags an item without deleting it, the same mark the D
+  // key already used on the grid's preview (bulk-deletable later via
+  // "Delete marked" in the toolbar). Real, immediate deletion stays on the
+  // trash button below, unchanged.
+  grid.querySelectorAll('[data-nouse]').forEach(el => el.addEventListener('click', async e => {
+    e.stopPropagation();
+    const v = state.videos[el.dataset.nouse];
+    v.mark = v.mark === 'delete' ? null : 'delete';
+    syncCardButtons(el.closest('.video-card'), v);
     updateActionButtons();
     await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: v.mark }) });
   }));
@@ -916,6 +925,16 @@ function renderGrid() {
   }));
   updateActionButtons();
   renderIcons(grid);
+}
+
+// Keeps a card's border and its star/"do not use" buttons in sync with its
+// mark - used wherever a card's mark changes, since it's one field that can
+// only ever be one thing at a time (starring something marked "do not use"
+// clears the "do not use" mark, and vice versa).
+function syncCardButtons(cardEl, v) {
+  cardEl.className = 'video-card ' + (v.mark || '');
+  cardEl.querySelector('[data-star]')?.classList.toggle('active', v.mark === 'save');
+  cardEl.querySelector('[data-nouse]')?.classList.toggle('marked', v.mark === 'delete');
 }
 
 function updateActionButtons() {
@@ -979,10 +998,9 @@ document.getElementById('deleteMarkedBtn').addEventListener('click', () => {
 // a full renderGrid() recreates every <video> element from scratch,
 // which flickers/reloads them all at once.
 function syncCardMarks() {
-  document.querySelectorAll('#videoGrid [data-star]').forEach(el => {
-    const v = state.videos[el.dataset.star];
-    el.closest('.video-card').className = 'video-card ' + (v.mark || '');
-    el.classList.toggle('active', v.mark === 'save');
+  document.querySelectorAll('#videoGrid .video-card').forEach(cardEl => {
+    const idx = cardEl.querySelector('[data-star]')?.dataset.star;
+    if (idx !== undefined) syncCardButtons(cardEl, state.videos[idx]);
   });
 }
 document.getElementById('selectAllLink').addEventListener('click', () => {
@@ -1023,13 +1041,19 @@ function openDeletedPreview(idx) {
   document.getElementById('previewModal').style.display = 'flex';
 }
 function currentPreviewList() { return state.previewMode === 'grid' ? state.videos : state.deletedVideos; }
+// Modal equivalent of the grid's syncCardButtons - one mark, so starring
+// clears "do not use" and vice versa.
+function syncPreviewButtons(v) {
+  document.getElementById('previewStarBtn').classList.toggle('active', v.mark === 'save');
+  document.getElementById('previewNoUseBtn').classList.toggle('marked', v.mark === 'delete');
+  document.getElementById('previewCard').className = 'modal-card ' + (v.mark || '');
+}
 function renderPreview() {
   const list = currentPreviewList();
   const v = list[state.previewIdx];
   document.getElementById('previewCounter').textContent = `${state.previewIdx + 1}/${list.length}`;
   document.getElementById('previewTagger').textContent = `@${v.tagger} • ${formatCardMeta(v.timestamp)}`;
-  document.getElementById('previewStarBtn').classList.toggle('active', v.mark === 'save');
-  document.getElementById('previewCard').className = 'modal-card ' + (v.mark || '');
+  syncPreviewButtons(v);
   const videoEl = document.getElementById('previewVideoEl');
   const imageEl = document.getElementById('previewImageEl');
   const playBtn = document.getElementById('previewPlayBtn');
@@ -1187,12 +1211,15 @@ document.getElementById('previewStarBtn').addEventListener('click', async () => 
   // - it re-fetches a download link and resets the <video> element's src,
   // which would restart playback from the beginning every time you star
   // something mid-video. Just update the two things that actually changed.
-  document.getElementById('previewStarBtn').classList.toggle('active', v.mark === 'save');
-  document.getElementById('previewCard').className = 'modal-card ' + (v.mark || '');
+  syncPreviewButtons(v);
   await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: v.mark }) });
   renderGrid();
 });
-document.getElementById('previewTrashBtn').addEventListener('click', () => { const idx = state.previewIdx; closePreview(); deleteSingle(idx); });
+// "Do not use" - same as pressing D (see markCurrentAndAdvance): flags the
+// item and moves on, rather than deleting it. There's no direct delete
+// button on the modal any more; real deletion only happens from the grid,
+// or in bulk from marked items via "Delete marked" in the toolbar.
+document.getElementById('previewNoUseBtn').addEventListener('click', () => markCurrentAndAdvance('delete'));
 document.getElementById('previewDlBtn').addEventListener('click', async () => {
   const v = currentPreviewList()[state.previewIdx];
   const { url } = await api(`/videos/${v.id}/download-url?download=1`);
@@ -1215,9 +1242,8 @@ async function markCurrentAndAdvance(mark) {
   v.mark = mark;
   // Same as the star button: only navPreview() (moving to a genuinely
   // different item) should reset the video/image - staying on the same
-  // item just needs these two bits updated directly.
-  document.getElementById('previewStarBtn').classList.toggle('active', v.mark === 'save');
-  document.getElementById('previewCard').className = 'modal-card ' + (v.mark || '');
+  // item just needs these bits updated directly.
+  syncPreviewButtons(v);
   await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark }) });
   renderGrid();
   if (state.previewIdx < state.videos.length - 1) navPreview('next');

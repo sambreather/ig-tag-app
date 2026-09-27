@@ -109,7 +109,7 @@ module.exports = {
     emptyNote: 'Nothing here yet.',
   },
   preview: {
-    hintRow: 'Space: Play/Pause \u00b7 \u2190\u2192: Scrub 5s \u00b7 \u2191\u2193: Prev/Next \u00b7 S: Save \u00b7 D: Delete',
+    hintRow: 'Space: Play/Pause \u00b7 \u2190\u2192: Scrub 5s \u00b7 \u2191\u2193: Prev/Next \u00b7 S: Save \u00b7 D: Do Not Use',
   },
   settings: {
     heading: 'General Settings',
