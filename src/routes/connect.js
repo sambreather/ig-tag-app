@@ -79,10 +79,31 @@ function page(heading, sub, color) {
 const errorPage = msg => page(msg, 'Ask whoever sent you this link for a new one.');
 const successPage = name => page(`✓ ${escapeHtml(name)} is now connected`, 'You can close this window.', '#4ade80');
 
+// Logs enough to diagnose a rejected link without writing the whole token
+// to the logs: which step rejected it, whether ANY client currently holds a
+// pending link at all (and its own state), and why this one didn't match.
+function logRejectedToken(step, token, data) {
+  const short = t => (t || '').slice(0, 8) + '…';
+  const pending = data.clients.filter(c => c.connectToken);
+  if (pending.length === 0) {
+    console.error(`${step}: rejected token ${short(token)} - no client currently has a pending connect link at all.`);
+    return;
+  }
+  const details = pending.map(c => {
+    const match = c.connectToken === token;
+    const expired = linkExpired(c);
+    return `${c.name} (token ${short(c.connectToken)}, ${match ? 'MATCHES' : 'different'}, ${expired ? 'expired' : 'not expired'}, expires ${c.connectTokenExpiresAt || 'n/a'})`;
+  });
+  console.error(`${step}: rejected token ${short(token)} - pending links: ${details.join('; ')}`);
+}
+
 publicRouter.get('/connect/:token', (req, res) => {
   const data = db.load();
   const client = findByConnectToken(data, req.params.token);
-  if (!client || linkExpired(client)) return res.status(410).send(errorPage('This link has expired or already been used'));
+  if (!client || linkExpired(client)) {
+    logRejectedToken('GET /connect/:token', req.params.token, data);
+    return res.status(410).send(errorPage('This link has expired or already been used'));
+  }
   res.redirect(auth.buildAuthorizeUrl({ redirectUri: callbackUrl(), state: req.params.token }));
 });
 
@@ -97,7 +118,10 @@ publicRouter.get('/connect/callback', async (req, res) => {
 
   const data = db.load();
   const client = findByConnectToken(data, state);
-  if (!client || linkExpired(client)) return res.status(410).send(errorPage('This link has expired or already been used'));
+  if (!client || linkExpired(client)) {
+    logRejectedToken('GET /connect/callback', state, data);
+    return res.status(410).send(errorPage('This link has expired or already been used'));
+  }
 
   try {
     const { accessToken: shortLived, igUserId } = await auth.exchangeCodeForShortLivedToken(code, callbackUrl());
