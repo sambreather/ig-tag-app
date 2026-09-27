@@ -111,7 +111,10 @@ async function handleStoryMention({ igUserId, mediaUrl, senderId, messageId, tim
   const data = db.load();
   const client = data.clients.find(c => c.igUserId === igUserId);
   if (!client) {
-    console.log(`Story mention for unknown IG account ${igUserId} - ignoring.`);
+    // List what's actually on file, so a genuine ID mismatch (as opposed to
+    // an account we really don't manage) is obvious from the logs alone.
+    const known = data.clients.filter(c => c.igUserId).map(c => `${c.name}=${c.igUserId}`).join(', ') || 'none';
+    console.log(`Story mention for unknown IG account ${igUserId} - ignoring. Known account IDs on file: ${known}`);
     return;
   }
 
