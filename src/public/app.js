@@ -972,6 +972,17 @@ function syncCardButtons(cardEl, v) {
   cardEl.querySelector('[data-star]')?.classList.toggle('active', v.mark === 'save');
   cardEl.querySelector('[data-nouse]')?.classList.toggle('marked', v.mark === 'delete');
 }
+// Same idea, from the modal: update the one matching grid card in place
+// rather than renderGrid(), which rebuilds every card's HTML from scratch
+// and made every video on the page flash/reload each time something was
+// marked from the modal (the grid's own star/"do not use" buttons already
+// avoided this via syncCardButtons above - this is that same fix, just
+// looked up by index since the modal isn't the card being clicked).
+function syncGridCardAt(idx, v) {
+  const starBtn = document.querySelector(`#videoGrid [data-star="${idx}"]`);
+  if (starBtn) syncCardButtons(starBtn.closest('.video-card'), v);
+  updateActionButtons();
+}
 
 function updateActionButtons() {
   document.getElementById('downloadAllBtn').style.display = state.videos.length ? 'inline-flex' : 'none';
@@ -1243,7 +1254,7 @@ document.getElementById('previewStarBtn').addEventListener('click', async () => 
   // something mid-video. Just update the two things that actually changed.
   syncPreviewButtons(v);
   await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: v.mark }) });
-  renderGrid();
+  syncGridCardAt(state.previewIdx, v);
 });
 // "Do not use" - flags the item, same as the grid's own toggle button:
 // click again to clear it, and stays on the same item rather than
@@ -1257,7 +1268,7 @@ document.getElementById('previewNoUseBtn').addEventListener('click', async () =>
   v.mark = v.mark === 'delete' ? null : 'delete';
   syncPreviewButtons(v);
   await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: v.mark }) });
-  renderGrid();
+  syncGridCardAt(state.previewIdx, v);
 });
 document.getElementById('previewDlBtn').addEventListener('click', async () => {
   const v = currentPreviewList()[state.previewIdx];
@@ -1288,7 +1299,7 @@ async function markCurrent(mark) {
   v.mark = v.mark === mark ? null : mark;
   syncPreviewButtons(v);
   await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: v.mark }) });
-  renderGrid();
+  syncGridCardAt(state.previewIdx, v);
 }
 document.addEventListener('keydown', e => {
   if (!state.modalOpen) return;
