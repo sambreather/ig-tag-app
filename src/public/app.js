@@ -1280,12 +1280,14 @@ document.getElementById('previewCard').addEventListener('click', e => e.stopProp
 // the current item's mark and stay put, same as clicking the star/"do not
 // use" buttons does (those toggle on a second press; these don't, matching
 // how S/D worked before, just without the advance).
+// Toggles, same as clicking the star/"do not use" buttons does - pressing
+// S or D again on an already-marked item clears it back to unmarked.
 async function markCurrent(mark) {
   if (state.previewMode !== 'grid') return;
   const v = state.videos[state.previewIdx];
-  v.mark = mark;
+  v.mark = v.mark === mark ? null : mark;
   syncPreviewButtons(v);
-  await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark }) });
+  await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: v.mark }) });
   renderGrid();
 }
 document.addEventListener('keydown', e => {
@@ -1294,7 +1296,8 @@ document.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   // Browsing and playback work in both modes; only save/delete marking
   // (there's nothing to mark on an already-deleted item) stays grid-only.
-  if (e.key === 'ArrowDown') { e.preventDefault(); navPreview('next'); }
+  if (e.key === 'Escape') { closePreview(); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); navPreview('next'); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); navPreview('prev'); }
   else if (e.key === ' ') { e.preventDefault(); if (video.style.display !== 'none') video.paused ? video.play() : video.pause(); }
   else if (e.key === 'ArrowLeft') { if (video.style.display !== 'none') video.currentTime = Math.max(0, video.currentTime - 5); }

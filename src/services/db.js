@@ -31,7 +31,7 @@ const RENAMED_WORDING = {
     linkExpiryNote: ['Works once, for whoever opens it next. Expires {time}.', 'Works once, for whoever opens it next.'],
   },
   preview: {
-    hintRow: ['Space: Play/Pause · ←→: Scrub 5s · ↑↓: Prev/Next · S: Save · D: Delete', 'Space: Play/Pause · ←→: Scrub 5s · ↑↓: Prev/Next · S: Save · D: Do Not Use'],
+    hintRow: ['Space: Play/Pause · ←→: Scrub 5s · ↑↓: Prev/Next · S: Save · D: Do Not Use', 'Space: Play/Pause · ←→: Scrub 5s · ↑↓: Prev/Next · S: Save · D: Do Not Use · Esc: Close'],
   },
 };
 function migrateWording(content) {
