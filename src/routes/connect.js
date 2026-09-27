@@ -77,7 +77,7 @@ function page(heading, sub, color) {
 </style></head><body><div class="card">${logoHtml()}<h1>${heading}</h1><p>${sub}</p></div></body></html>`;
 }
 const errorPage = msg => page(msg, 'Ask whoever sent you this link for a new one.');
-const successPage = name => page(`✓ ${escapeHtml(name)} is now connected`, 'You can close this window.', '#4ade80');
+const successPage = name => page(`${escapeHtml(name)} is now connected.`, 'You can close this window.', '#4ade80');
 
 // Logs enough to diagnose a rejected link without writing the whole token
 // to the logs: which step rejected it, whether ANY client currently holds a
@@ -119,14 +119,21 @@ publicRouter.get('/connect/callback', async (req, res) => {
   const client = findByConnectToken(data, state);
   if (!client || linkExpired(client)) {
     logRejectedToken('GET /connect/callback', state, data);
-    return res.status(410).send(errorPage('This link has expired or already been used'));
+    return res.status(410).send(errorPage('This link has expired or already been used.'));
   }
 
   try {
-    const { accessToken: shortLived, igUserId } = await auth.exchangeCodeForShortLivedToken(code, callbackUrl());
+    const { accessToken: shortLived, igUserId: codeExchangeId } = await auth.exchangeCodeForShortLivedToken(code, callbackUrl());
     const { accessToken, expiresInSeconds } = await auth.exchangeForLongLivedToken(shortLived);
     await auth.subscribeToMessages(accessToken);
-    const igUsername = await auth.fetchUsername(igUserId, accessToken);
+    const { username: igUsername, webhookUserId } = await auth.fetchProfile(codeExchangeId, accessToken);
+    // The code-exchange step's ID isn't the one Story mention webhooks use
+    // (confirmed against real deliveries - see fetchProfile's own comment).
+    // Falling back to it if the profile lookup ever fails is still better
+    // than saving nothing, but webhooks won't match until a reconnect
+    // succeeds in fetching the right one, so it's logged clearly.
+    const igUserId = webhookUserId || codeExchangeId;
+    if (!webhookUserId) console.error(`Connect for client ${client.id}: couldn't fetch the webhook-matching account ID, falling back to the code-exchange one - Story mentions won't be captured until a reconnect gets it.`);
 
     // Re-load right before saving, in case something else changed this
     // client (or another) while we were busy talking to Instagram, and
@@ -156,7 +163,7 @@ publicRouter.get('/connect/:token', (req, res) => {
   const client = findByConnectToken(data, req.params.token);
   if (!client || linkExpired(client)) {
     logRejectedToken('GET /connect/:token', req.params.token, data);
-    return res.status(410).send(errorPage('This link has expired or already been used'));
+    return res.status(410).send(errorPage('This link has expired or already been used.'));
   }
   res.redirect(auth.buildAuthorizeUrl({ redirectUri: callbackUrl(), state: req.params.token }));
 });

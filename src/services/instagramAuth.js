@@ -84,22 +84,24 @@ async function subscribeToMessages(accessToken) {
   });
 }
 
-/** Cosmetic only (shown in the admin UI as "connected as @x") - never worth failing the connection over. */
-async function fetchUsername(igUserId, accessToken) {
+/**
+ * The username is cosmetic (shown in the admin UI as "connected as @x").
+ * webhookUserId is NOT cosmetic - confirmed against two real Story mentions
+ * that the code-exchange step's "user_id" (saved here as igUserId until
+ * this fix) is a DIFFERENT number from the "user_id" this /{id} profile
+ * lookup returns, and it's specifically the latter that shows up as
+ * entry.id on incoming webhook events. Meta's own docs don't spell this
+ * distinction out clearly, so it's flagged in detail here rather than
+ * assumed to still hold if this ever needs revisiting.
+ */
+async function fetchProfile(igUserId, accessToken) {
   try {
     const res = await axios.get(`https://graph.instagram.com/${igUserId}`, {
-      params: { fields: 'username,user_id,id', access_token: accessToken },
+      params: { fields: 'username,user_id', access_token: accessToken },
     });
-    // TEMPORARY diagnostic: webhook deliveries are arriving with an account
-    // ID (17841471692101095, confirmed from two real Story mentions) that
-    // doesn't match what this step saves as igUserId (the code-exchange's
-    // "user_id"). Logging every ID field this call can return, so the
-    // right one to actually store can be confirmed from a real response
-    // instead of guessed - remove this log once that's settled.
-    console.log('Instagram profile fields (diagnosing the webhook ID mismatch):', JSON.stringify(res.data));
-    return res.data?.username || null;
+    return { username: res.data?.username || null, webhookUserId: res.data?.user_id ? String(res.data.user_id) : null };
   } catch {
-    return null;
+    return { username: null, webhookUserId: null };
   }
 }
 
@@ -129,6 +131,6 @@ module.exports = {
   exchangeForLongLivedToken,
   refreshLongLivedToken,
   subscribeToMessages,
-  fetchUsername,
+  fetchProfile,
   verifyDeauthPayload,
 };
