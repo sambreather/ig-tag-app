@@ -88,8 +88,15 @@ async function subscribeToMessages(accessToken) {
 async function fetchUsername(igUserId, accessToken) {
   try {
     const res = await axios.get(`https://graph.instagram.com/${igUserId}`, {
-      params: { fields: 'username', access_token: accessToken },
+      params: { fields: 'username,user_id,id', access_token: accessToken },
     });
+    // TEMPORARY diagnostic: webhook deliveries are arriving with an account
+    // ID (17841471692101095, confirmed from two real Story mentions) that
+    // doesn't match what this step saves as igUserId (the code-exchange's
+    // "user_id"). Logging every ID field this call can return, so the
+    // right one to actually store can be confirmed from a real response
+    // instead of guessed - remove this log once that's settled.
+    console.log('Instagram profile fields (diagnosing the webhook ID mismatch):', JSON.stringify(res.data));
     return res.data?.username || null;
   } catch {
     return null;
