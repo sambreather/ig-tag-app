@@ -1235,11 +1235,20 @@ document.getElementById('previewStarBtn').addEventListener('click', async () => 
   await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: v.mark }) });
   renderGrid();
 });
-// "Do not use" - same as pressing D (see markCurrentAndAdvance): flags the
-// item and moves on, rather than deleting it. There's no direct delete
-// button on the modal any more; real deletion only happens from the grid,
-// or in bulk from marked items via "Delete marked" in the toolbar.
-document.getElementById('previewNoUseBtn').addEventListener('click', () => markCurrentAndAdvance('delete'));
+// "Do not use" - flags the item, same as the grid's own toggle button:
+// click again to clear it, and stays on the same item rather than
+// advancing (that auto-advance is D's own thing, for quickly moving
+// through a whole capture - a direct click just toggles this one item).
+// There's no direct delete button on the modal any more; real deletion
+// only happens from the grid, or in bulk from marked items via "Delete
+// marked" in the toolbar.
+document.getElementById('previewNoUseBtn').addEventListener('click', async () => {
+  const v = state.videos[state.previewIdx];
+  v.mark = v.mark === 'delete' ? null : 'delete';
+  syncPreviewButtons(v);
+  await api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: v.mark }) });
+  renderGrid();
+});
 document.getElementById('previewDlBtn').addEventListener('click', async () => {
   const v = currentPreviewList()[state.previewIdx];
   const { url } = await api(`/videos/${v.id}/download-url?download=1`);
