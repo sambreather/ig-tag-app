@@ -95,8 +95,13 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 .album-row .info { flex: 1 1 160px; min-width: 0; cursor: pointer; }
 .album-row .name { font-size: 15px; font-weight: 600; }
 .album-row .dates { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
-.album-row-meta { display: flex; align-items: center; gap: 14px; margin-left: auto; }
-.album-row .files { font-size: 13px; white-space: nowrap; }
+/* No margin-left: auto here - .info's flex-grow already fills the leftover
+   space on one line, which sits this group at the right edge on its own,
+   the same as before; the difference is that without an auto margin of its
+   own, this group falls back to the row's normal left-aligned start once it
+   wraps onto its own line, instead of staying pinned to the right. */
+.album-row-meta { display: flex; align-items: center; gap: 14px; }
+.album-row .files { font-size: 13px; width: 190px; white-space: nowrap; }
 .album-row .files .muted { color: var(--text-muted); }
 .album-row .status { font-size: 13px; font-weight: 600; width: 80px; text-align: right; }
 .album-row .status.live { color: var(--green); }
