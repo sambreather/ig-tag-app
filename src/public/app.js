@@ -105,6 +105,7 @@ function applyContent() {
   document.getElementById('formStartLockedNote').textContent = CONTENT.albumForm.startLockedNote;
   document.getElementById('formEndLockedNote').textContent = CONTENT.albumForm.endLockedNote;
   document.getElementById('pickerNowLink').textContent = CONTENT.albumForm.startCapturingNowLink;
+  document.getElementById('endCaptureNowLink').textContent = CONTENT.albumForm.endCaptureNowLink;
 
   document.getElementById('timeSelect').previousElementSibling.textContent = CONTENT.picker.timeLabel;
   document.getElementById('pickerCancel').textContent = CONTENT.picker.cancelButton;
@@ -707,6 +708,7 @@ function openAlbumForm(albumId) {
   document.getElementById('formEndField').disabled = !!endLocked;
   document.getElementById('formStartLockedNote').style.display = startLocked ? 'block' : 'none';
   document.getElementById('formEndLockedNote').style.display = endLocked ? 'block' : 'none';
+  document.getElementById('endCaptureNowLink').style.display = album && album.status === 'capturing' ? 'block' : 'none';
   document.getElementById('saveFormBtn').textContent = album ? CONTENT.albumForm.saveButtonEdit : CONTENT.albumForm.saveButtonNew;
   showScreen('albumFormView');
 }
@@ -749,6 +751,19 @@ document.getElementById('saveFormBtn').addEventListener('click', async () => {
     }
   }
   doSave();
+});
+
+document.getElementById('endCaptureNowLink').addEventListener('click', () => {
+  const { clientId, albumId } = state.formTarget;
+  showConfirm(CONTENT.albumForm.endCaptureConfirm, async () => {
+    try {
+      await api(`/albums/${albumId}/stop`, { method: 'POST' });
+      showAlbums(clientId);
+      showToast(CONTENT.albumForm.captureEndedToast, null);
+    } catch {
+      showAlert(CONTENT.albumForm.endCaptureFailedWarning);
+    }
+  });
 });
 
 // --- Date/time picker ---
