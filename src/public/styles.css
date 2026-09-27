@@ -27,7 +27,10 @@ html.is-logged-in #screenApp { display: block; }
 
 .login-card { background: var(--surface-1); border-radius: 14px; padding: 32px; width: 280px; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
 .login-card h1 { font-size: 18px; margin-bottom: 20px; }
-.login-logo { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; margin-bottom: 16px; }
+/* Shown by JS setting style.display = 'block', which takes it out of the
+   card's text-align: center (that only centers inline-level content) -
+   margin: 0 auto re-centers it regardless. */
+.login-logo { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; margin: 0 auto 16px; display: block; }
 .login-card input { width: 100%; margin-bottom: 12px; }
 .error-text { color: var(--red); font-size: 12px; margin-top: 8px; }
 
@@ -83,12 +86,17 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 .topbar-actions { display: flex; gap: 8px; }
 
 .album-list { display: flex; flex-direction: column; gap: 10px; }
-.album-row { display: flex; align-items: center; gap: 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+/* flex-wrap so the name/dates never get squeezed to a sliver on a narrow
+   phone - once the row's too tight for both halves side by side, the whole
+   "count/status/buttons" group (kept together, never split, via
+   .album-row-meta) drops to its own line under the name instead. */
+.album-row { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
 .album-row.live { border: 2px solid var(--green); }
-.album-row .info { flex: 1; min-width: 0; cursor: pointer; }
+.album-row .info { flex: 1 1 160px; min-width: 0; cursor: pointer; }
 .album-row .name { font-size: 15px; font-weight: 600; }
 .album-row .dates { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
-.album-row .files { font-size: 13px; width: 190px; }
+.album-row-meta { display: flex; align-items: center; gap: 14px; margin-left: auto; }
+.album-row .files { font-size: 13px; white-space: nowrap; }
 .album-row .files .muted { color: var(--text-muted); }
 .album-row .status { font-size: 13px; font-weight: 600; width: 80px; text-align: right; }
 .album-row .status.live { color: var(--green); }
