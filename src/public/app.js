@@ -118,8 +118,8 @@ function applyContent() {
     <option value="oldest">${CONTENT.videos.sortOldest}</option>
     <option value="az">${CONTENT.videos.sortAlphabetical}</option>`;
 
-  document.getElementById('selectAllLink').textContent = CONTENT.videos.selectAllLink;
-  document.getElementById('selectNoneLink').textContent = CONTENT.videos.selectNoneLink;
+  document.querySelector('#downloadAllBtn span').textContent = CONTENT.videos.downloadAllButton;
+  document.getElementById('resetMarksLink').textContent = CONTENT.albumForm.resetMarksLink;
 
   document.getElementById('previewHintRow').textContent = CONTENT.preview.hintRow;
   document.getElementById('previewRestoreBtn').textContent = CONTENT.deletedFiles.restoreButton;
@@ -685,11 +685,21 @@ async function deleteAlbum(albumId) {
 
 // --- New album / settings form (shared) ---
 document.getElementById('newAlbumBtn').addEventListener('click', () => openAlbumForm(null));
-document.getElementById('backFromFormBtn').addEventListener('click', () => showAlbums(state.currentClientId));
+document.getElementById('backFromFormBtn').addEventListener('click', returnFromForm);
 
-function openAlbumForm(albumId) {
+// Where "back" (and Save, End Capture Now, and Reset below) should land:
+// the main capture list, unless this form was opened via the cog on an
+// already-open capture's own toolbar, in which case it returns there
+// instead of dropping back out to the list.
+function returnFromForm() {
+  const { clientId, albumId, origin } = state.formTarget;
+  if (origin === 'capture' && albumId) openAlbum(albumId);
+  else showAlbums(clientId);
+}
+
+function openAlbumForm(albumId, origin = 'albums') {
   const album = albumId ? state.albums.find(a => a.id === albumId) : null;
-  state.formTarget = { clientId: state.currentClientId, albumId };
+  state.formTarget = { clientId: state.currentClientId, albumId, origin };
   document.getElementById('formTitle').textContent = album ? CONTENT.albumForm.titleEdit : CONTENT.albumForm.titleNew;
   document.getElementById('formName').value = album ? album.name : '';
   state.formStartVal = album && album.start ? fmtShort(album.start) : '';
@@ -710,6 +720,8 @@ function openAlbumForm(albumId) {
   document.getElementById('formStartLockedNote').style.display = startLocked ? 'block' : 'none';
   document.getElementById('formEndLockedNote').style.display = endLocked ? 'block' : 'none';
   document.getElementById('endCaptureNowLink').style.display = album && album.status === 'capturing' ? 'block' : 'none';
+  // Nothing to reset yet on a capture that doesn't exist as a record until Save.
+  document.getElementById('resetMarksLink').style.display = album ? 'block' : 'none';
   document.getElementById('saveFormBtn').textContent = album ? CONTENT.albumForm.saveButtonEdit : CONTENT.albumForm.saveButtonNew;
   showScreen('albumFormView');
 }
@@ -740,7 +752,7 @@ document.getElementById('saveFormBtn').addEventListener('click', async () => {
 
     if (albumId) await api(`/albums/${albumId}`, { method: 'PATCH', body: JSON.stringify(body) });
     else await api(`/clients/${clientId}/albums`, { method: 'POST', body: JSON.stringify(body) });
-    showAlbums(clientId);
+    returnFromForm();
     showToast(CONTENT.albumForm.savedToast, null);
   };
 
@@ -755,14 +767,33 @@ document.getElementById('saveFormBtn').addEventListener('click', async () => {
 });
 
 document.getElementById('endCaptureNowLink').addEventListener('click', () => {
-  const { clientId, albumId } = state.formTarget;
+  const { albumId } = state.formTarget;
   showConfirm(CONTENT.albumForm.endCaptureConfirm, async () => {
     try {
       await api(`/albums/${albumId}/stop`, { method: 'POST' });
-      showAlbums(clientId);
+      returnFromForm();
       showToast(CONTENT.albumForm.captureEndedToast, null);
     } catch {
       showAlert(CONTENT.albumForm.endCaptureFailedWarning);
+    }
+  });
+});
+
+// Clears every item's starred/"do not use" mark for this capture back to
+// default - a deliberate, explicit reset (Select All/None used to make
+// something like this a single accidental click away from wiping a whole
+// review pass, which is exactly why they were removed). Only the reset
+// itself is applied - any other edits sitting in the name/start/end
+// fields on this screen are discarded, same as just pressing back.
+document.getElementById('resetMarksLink').addEventListener('click', () => {
+  const { albumId } = state.formTarget;
+  showConfirm(CONTENT.albumForm.resetMarksConfirm, async () => {
+    try {
+      await api(`/albums/${albumId}/reset-marks`, { method: 'POST' });
+      returnFromForm();
+      showToast(CONTENT.albumForm.resetMarksToast, null);
+    } catch {
+      showAlert(CONTENT.albumForm.resetMarksFailedWarning);
     }
   });
 });
@@ -850,6 +881,11 @@ document.getElementById('sizeToggle').addEventListener('click', () => {
   renderIcons(document.getElementById('sizeToggle'));
   renderGrid();
 });
+// Same Capture Settings screen the gear icon on the main capture list
+// opens, just reached from inside the capture itself - "back" (and Save/
+// End Capture Now/Reset) returns here afterwards rather than dropping out
+// to the main list, since that's where this was opened from.
+document.getElementById('captureSettingsBtn').addEventListener('click', () => openAlbumForm(state.currentAlbumId, 'capture'));
 
 function sortVideos(mode) {
   if (mode === 'newest') state.videos.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -938,6 +974,8 @@ function syncCardButtons(cardEl, v) {
 }
 
 function updateActionButtons() {
+  document.getElementById('downloadAllBtn').style.display = state.videos.length ? 'inline-flex' : 'none';
+
   const starred = state.videos.filter(v => v.mark === 'save').length;
   const dlBtn = document.getElementById('downloadStarredBtn');
   dlBtn.style.display = starred ? 'inline-flex' : 'none';
@@ -962,13 +1000,14 @@ async function deleteSingle(idx) {
   });
 }
 
-// NOTE: Select All/None saves each item's starred status in the
-// background rather than waiting for it (see those handlers below), so
-// clicking this immediately afterwards could, in theory, race ahead of
-// one of those saves - the server would build the zip from whatever it's
-// recorded so far, which might not yet be everything shown as starred on
-// screen. Once the real zip download is built, it should wait for any
-// in-flight mark saves to finish before opening the zip link.
+document.getElementById('downloadAllBtn').addEventListener('click', () => {
+  const count = state.videos.length;
+  showConfirm(fill(CONTENT.videos.downloadAllConfirm, { count }), () => {
+    const album = state.albums.find(a => a.id === state.currentAlbumId);
+    downloadFile(`/albums/${state.currentAlbumId}/download-all-zip`, `${slugifyFilename(album && album.name)}.zip`)
+      .catch(() => showToast(CONTENT.videos.downloadFailedToast, null));
+  });
+});
 document.getElementById('downloadStarredBtn').addEventListener('click', () => {
   const count = state.videos.filter(v => v.mark === 'save').length;
   showConfirm(fill(CONTENT.videos.downloadStarredConfirm, { count }), () => {
@@ -989,35 +1028,6 @@ document.getElementById('deleteMarkedBtn').addEventListener('click', () => {
     renderGrid();
     showToast(fill(CONTENT.videos.deleteMultipleToast, { count: marked.length }), null);
   });
-});
-// Star (or un-star) everything in the capture in one go, rather than
-// clicking through every item - mainly so "download all" is a two-click
-// job instead of one click per file.
-// Updates every card's border/star-active state to match state.videos,
-// without rebuilding the grid - same reason as the single star button:
-// a full renderGrid() recreates every <video> element from scratch,
-// which flickers/reloads them all at once.
-function syncCardMarks() {
-  document.querySelectorAll('#videoGrid .video-card').forEach(cardEl => {
-    const idx = cardEl.querySelector('[data-star]')?.dataset.star;
-    if (idx !== undefined) syncCardButtons(cardEl, state.videos[idx]);
-  });
-}
-document.getElementById('selectAllLink').addEventListener('click', () => {
-  const toMark = state.videos.filter(v => v.mark !== 'save');
-  toMark.forEach(v => v.mark = 'save');
-  syncCardMarks();
-  updateActionButtons(); // instant - the saves below happen in the
-  // background, in parallel, rather than one-by-one-then-render (which is
-  // what made this take longer the more items there were).
-  toMark.forEach(v => api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: 'save' }) }).catch(() => {}));
-});
-document.getElementById('selectNoneLink').addEventListener('click', () => {
-  const toClear = state.videos.filter(v => v.mark === 'save');
-  toClear.forEach(v => v.mark = null);
-  syncCardMarks();
-  updateActionButtons();
-  toClear.forEach(v => api(`/videos/${v.id}/mark`, { method: 'PATCH', body: JSON.stringify({ mark: null }) }).catch(() => {}));
 });
 
 // --- Unified preview / review modal ---

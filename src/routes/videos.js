@@ -63,17 +63,9 @@ router.get('/videos/:videoId/download-url', (req, res) => {
   res.json({ url: storage.getSignedDownloadUrl(video.storageKey, 300, filename) });
 });
 
-// Download all "starred" (mark='save') videos in an album as a single .zip.
-// NOTE: reads whatever's currently saved here, not what the browser shows
-// on screen - see the matching note by downloadStarredBtn in app.js about
-// Select All/None racing ahead of this if clicked in very quick succession.
-router.get('/albums/:albumId/download-starred-zip', async (req, res) => {
-  const data = db.load();
-  const videos = data.videos.filter(v => v.albumId === req.params.albumId && v.mark === 'save' && !v.deleted);
-  if (videos.length === 0) return res.status(400).json({ error: 'No starred videos' });
-
-  // e.g. "23 Sep test" -> "23-sep-test.zip", matching the capture's own name.
-  const album = data.albums.find(a => a.id === req.params.albumId);
+// Shared by download-starred-zip and download-all-zip below - builds and
+// streams a .zip of whichever videos it's given.
+async function sendZip(res, album, videos) {
   const slug = (album ? album.name : '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   res.attachment(`${slug || 'capture'}.zip`);
   const archive = archiver('zip');
@@ -85,6 +77,38 @@ router.get('/albums/:albumId/download-starred-zip', async (req, res) => {
     archive.append(await (await fetch(url)).arrayBuffer().then(Buffer.from), { name: `${video.tagger}_${video.timestamp}.${video.type === 'video' ? 'mp4' : 'jpg'}` });
   }
   archive.finalize();
+}
+
+// Download all "starred" (mark='save') videos in an album as a single .zip.
+// NOTE: reads whatever's currently saved here, not what the browser shows
+// on screen - a star click's own PATCH could in theory still be in flight
+// when this is requested right after it.
+router.get('/albums/:albumId/download-starred-zip', async (req, res) => {
+  const data = db.load();
+  const videos = data.videos.filter(v => v.albumId === req.params.albumId && v.mark === 'save' && !v.deleted);
+  if (videos.length === 0) return res.status(400).json({ error: 'No starred videos' });
+  await sendZip(res, data.albums.find(a => a.id === req.params.albumId), videos);
+});
+
+// Download every (non-deleted) video in an album as a single .zip,
+// regardless of mark - the "Download All" button.
+router.get('/albums/:albumId/download-all-zip', async (req, res) => {
+  const data = db.load();
+  const videos = data.videos.filter(v => v.albumId === req.params.albumId && !v.deleted);
+  if (videos.length === 0) return res.status(400).json({ error: 'No videos' });
+  await sendZip(res, data.albums.find(a => a.id === req.params.albumId), videos);
+});
+
+// Clears every video's mark back to null for a capture - the "Reset
+// starred items" action in Capture Settings. A deliberate, separate step
+// (behind its own confirmation) rather than something a stray click on
+// the main grid could ever do by accident.
+router.post('/albums/:albumId/reset-marks', (req, res) => {
+  const data = db.load();
+  const videos = data.videos.filter(v => v.albumId === req.params.albumId && !v.deleted);
+  videos.forEach(v => { v.mark = null; });
+  db.save(data);
+  res.json({ count: videos.length });
 });
 
 // Every deleted video for a client, across all its albums (deleted or
