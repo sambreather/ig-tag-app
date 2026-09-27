@@ -28,6 +28,7 @@ const RENAMED_WORDING = {
     missingNameWarning: ['Please enter a client name.', 'Please enter an artist name.'],
     addFailedWarning: ['Something went wrong adding this client. Please try again.', 'Something went wrong adding this artist. Please try again.'],
     savedToast: ['Client saved.', 'Artist saved.'],
+    linkExpiryNote: ['Works once, for whoever opens it next. Expires {time}.', 'Works once, for whoever opens it next.'],
   },
 };
 function migrateWording(content) {

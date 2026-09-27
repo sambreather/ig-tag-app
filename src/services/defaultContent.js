@@ -83,7 +83,7 @@ module.exports = {
     connectLinkFailedWarning: 'Something went wrong creating the link. Please try again.',
     copyLinkButton: 'Copy link',
     linkCopiedToast: 'Link copied.',
-    linkExpiryNote: 'Works once, for whoever opens it next. Expires {time}.',
+    linkExpiryNote: 'Works once, for whoever opens it next.',
     manualLabel: 'Or enter manually',
   },
   picker: { timeLabel: 'Time', cancelButton: 'Cancel', doneButton: 'Done' },
