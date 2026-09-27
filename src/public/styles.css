@@ -86,26 +86,37 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 .topbar-actions { display: flex; gap: 8px; }
 
 .album-list { display: flex; flex-direction: column; gap: 10px; }
-/* flex-wrap so the name/dates never get squeezed to a sliver on a narrow
-   phone - once the row's too tight for both halves side by side, the whole
-   "count/status/buttons" group (kept together, never split, via
-   .album-row-meta) drops to its own line under the name instead. */
-.album-row { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+.album-row { display: flex; align-items: center; gap: 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
 .album-row.live { border: 2px solid var(--green); }
-.album-row .info { flex: 1 1 160px; min-width: 0; cursor: pointer; }
+.album-row .info { flex: 1; min-width: 0; cursor: pointer; }
 .album-row .name { font-size: 15px; font-weight: 600; }
 .album-row .dates { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
-/* No margin-left: auto here - .info's flex-grow already fills the leftover
-   space on one line, which sits this group at the right edge on its own,
-   the same as before; the difference is that without an auto margin of its
-   own, this group falls back to the row's normal left-aligned start once it
-   wraps onto its own line, instead of staying pinned to the right. */
 .album-row-meta { display: flex; align-items: center; gap: 14px; }
 .album-row .files { font-size: 13px; width: 190px; white-space: nowrap; }
 .album-row .files .muted { color: var(--text-muted); }
+/* margin-left: auto (not space-between - see the media query below) keeps
+   this pinned to the right edge whether it's sharing a line with .files or,
+   once too narrow for that, has wrapped onto a line of its own. */
+.album-row-status-actions { display: flex; align-items: center; gap: 14px; margin-left: auto; }
 .album-row .status { font-size: 13px; font-weight: 600; width: 80px; text-align: right; }
 .album-row .status.live { color: var(--green); }
 .album-row .row-actions { display: flex; gap: 8px; }
+
+/* Below this width the name/dates don't fit next to the file count, status
+   and buttons on one line, so the whole count/status/buttons group drops to
+   its own line under the name. Within that line, .album-row-meta is also
+   allowed to wrap (flex-wrap, no forced 100% width) - on an ordinary phone
+   the count and the status+buttons group share the line with the count on
+   the left and the group on the right; on a genuinely narrow phone, where
+   even that doesn't fit, the status+buttons group drops to a third line of
+   its own, still pinned to the right (margin-left: auto works the same on
+   a line with nothing else on it) rather than being cut off. */
+@media (max-width: 480px) {
+  .album-row { flex-wrap: wrap; }
+  .album-row .info { flex: 1 1 100%; }
+  .album-row-meta { flex: 1 1 100%; flex-wrap: wrap; row-gap: 8px; }
+  .album-row .files { width: auto; }
+}
 
 .form-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .screen-title { font-size: 15px; font-weight: 600; }

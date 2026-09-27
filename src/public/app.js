@@ -636,10 +636,12 @@ function renderAlbumList() {
         </div>
         <div class="album-row-meta">
           <div class="files">${filesText}</div>
-          <div class="status ${isLive ? 'live' : ''}">${statusLabel}</div>
-          <div class="row-actions">
-            <button data-settings="${a.id}" class="icon-btn" aria-label="Album settings"><i class="icon-settings"></i></button>
-            <button data-delalbum="${a.id}" class="icon-btn" aria-label="Delete album"><i class="icon-trash"></i></button>
+          <div class="album-row-status-actions">
+            <div class="status ${isLive ? 'live' : ''}">${statusLabel}</div>
+            <div class="row-actions">
+              <button data-settings="${a.id}" class="icon-btn" aria-label="Album settings"><i class="icon-settings"></i></button>
+              <button data-delalbum="${a.id}" class="icon-btn" aria-label="Delete album"><i class="icon-trash"></i></button>
+            </div>
           </div>
         </div>
       </div>`;
