@@ -107,6 +107,13 @@
     <div id="albumsView">
       <div id="albumList" class="album-list"></div>
       <div class="deleted-btn-row">
+        <div id="storageUsageIndicator" class="storage-usage" style="display:none;">
+          <div class="storage-usage-bar"><div id="storageUsageBarFill" class="storage-usage-bar-fill"></div></div>
+          <div id="storageUsageText" class="storage-usage-text"></div>
+          <div id="storageUsageWarning" class="storage-usage-warning" style="display:none;">
+            <span id="storageUsageWarningLink" class="select-link">What happens if we go over 10GB?</span>
+          </div>
+        </div>
         <button id="deletedFilesBtn" class="btn-plain"><i class="icon-trash"></i> Deleted</button>
       </div>
     </div>

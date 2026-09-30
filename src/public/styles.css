@@ -50,7 +50,13 @@ label { font-size: 12px; color: var(--text-secondary); display: block; margin: 1
 .btn-plain { background: var(--surface-1); color: var(--text-primary); display: inline-flex; align-items: center; gap: 6px; }
 #deletedFilesBtn .icon-trash svg { width: 12px; height: 12px; }
 .icon-green { color: var(--green); }
-.deleted-btn-row { display: flex; justify-content: flex-end; margin-top: 16px; }
+.deleted-btn-row { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
+.storage-usage { width: 200px; }
+.storage-usage-bar { height: 6px; border-radius: 3px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
+.storage-usage-bar-fill { height: 100%; background: var(--green); border-radius: 3px; transition: width 0.3s ease; }
+.storage-usage-bar-fill.danger { background: var(--red); }
+.storage-usage-text { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+.storage-usage-warning { font-size: 13px; margin-top: 4px; }
 #formName { width: 50%; min-width: 220px; }
 
 .content-group { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; background: var(--surface-1); }

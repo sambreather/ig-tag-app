@@ -274,7 +274,35 @@ async function startApp() {
     showScreen('albumsView');
     document.getElementById('albumList').innerHTML = '<div class="meta-text">No artists set up yet.</div>';
   }
+
+  // Not client-specific and rarely changes fast enough to matter, so this
+  // is fetched once per session rather than on every client/album switch.
+  loadStorageUsage();
 }
+
+// Backblaze's B2 storage is free for the first 10GB, then billed per GB -
+// this is that free allowance, not an actual cap on what the app can store.
+const STORAGE_FREE_LIMIT_GB = 10;
+
+async function loadStorageUsage() {
+  try {
+    const { gb } = await api('/storage-usage');
+    const usedGb = parseFloat(gb);
+    const pct = Math.min(100, (usedGb / STORAGE_FREE_LIMIT_GB) * 100);
+    const isDanger = pct >= 90;
+
+    document.getElementById('storageUsageIndicator').style.display = 'block';
+    document.getElementById('storageUsageBarFill').style.width = `${pct}%`;
+    document.getElementById('storageUsageBarFill').classList.toggle('danger', isDanger);
+    document.getElementById('storageUsageText').textContent = `Using ${gb} GB of ${STORAGE_FREE_LIMIT_GB} GB storage`;
+    document.getElementById('storageUsageWarning').style.display = isDanger ? 'block' : 'none';
+  } catch {
+    // Left hidden on failure - not worth a toast over a label nobody's waiting on.
+  }
+}
+document.getElementById('storageUsageWarningLink').addEventListener('click', () => {
+  showAlert("Backblaze gives the first 10GB of storage free. Past that, it costs a small amount per GB stored each month (roughly $7 per TB) - there's no hard cutoff and nothing gets blocked or deleted, it just starts adding a small monthly cost based on how much is stored.");
+});
 
 // --- Settings (wording, custom CSS, logo) ---
 async function loadSettings() {
