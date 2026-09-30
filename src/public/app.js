@@ -67,6 +67,9 @@ const state = {
   previewMode: 'grid', // 'grid' | 'deleted'
   previewIdx: 0,
   deletedVideos: [],
+  deletedClientName: '',
+  deletedGroups: {}, // albumId -> { name, albumDeleted, videos } - all albums with deleted items
+  deletedAlbumId: null, // which group Deleted Files is currently browsing into, null = the album list
   formTarget: null, // { clientId, albumId } or { clientId, albumId: null } for new
   formStartVal: '', formStartDate: null, formStartIsNow: false,
   formEndVal: '', formEndDate: null,
@@ -1279,7 +1282,7 @@ document.getElementById('previewRestoreBtn').addEventListener('click', async () 
   const v = state.deletedVideos[state.previewIdx];
   await api(`/videos/${v.id}/restore`, { method: 'POST' });
   closePreview();
-  showDeletedFiles();
+  refreshDeletedFiles();
 });
 function closePreview() { document.getElementById('previewModal').style.display = 'none'; state.modalOpen = false; }
 document.getElementById('closePreview').addEventListener('click', closePreview);
@@ -1318,35 +1321,90 @@ document.addEventListener('keydown', e => {
 });
 
 // --- Deleted files ---
+// Two levels: pick which capture (album) has deleted items, then browse
+// that album's deleted items - avoids one unorganised list across every
+// capture a client has ever run.
 document.getElementById('deletedFilesBtn').addEventListener('click', showDeletedFiles);
-document.getElementById('backFromDeletedBtn').addEventListener('click', () => showScreen('albumsView'));
+document.getElementById('backFromDeletedBtn').addEventListener('click', () => {
+  if (state.deletedAlbumId) { state.deletedAlbumId = null; renderDeletedAlbumList(); }
+  else showScreen('albumsView');
+});
 
 async function showDeletedFiles() {
   showScreen('deletedView');
-  const client = state.clients.find(c => c.id === state.currentClientId);
-  document.getElementById('deletedClientTitle').textContent = `${client.name} ${CONTENT.deletedFiles.titleSuffix}`;
+  state.deletedClientName = state.clients.find(c => c.id === state.currentClientId).name;
+  state.deletedAlbumId = null;
+  await refreshDeletedFiles();
+}
 
+// Re-fetches and re-renders wherever the user currently is (the album list,
+// or inside one album's items) - used after any restore, so a restore
+// doesn't always bounce back out to the top level.
+async function refreshDeletedFiles() {
   const videos = await api(`/clients/${state.currentClientId}/deleted-videos`);
-  state.deletedVideos = videos; // flat list, same order as rendered - what the preview modal navigates
-  const wrap = document.getElementById('deletedGroups');
-
-  if (videos.length === 0) {
-    wrap.innerHTML = `<div class="meta-text">${CONTENT.deletedFiles.emptyNote || 'Nothing here yet.'}</div>`;
-    return;
-  }
-
   const groups = {};
   videos.forEach(v => {
     if (!groups[v.albumId]) groups[v.albumId] = { name: v.albumName, albumDeleted: v.albumDeleted, videos: [] };
     groups[v.albumId].videos.push(v);
   });
+  state.deletedGroups = groups;
 
-  wrap.innerHTML = Object.entries(groups).map(([albumId, group]) => `
-    <div class="deleted-group">
-      <div class="deleted-group-header">
-        <div class="deleted-group-title">${group.name}</div>
+  if (state.deletedAlbumId && groups[state.deletedAlbumId]) renderDeletedAlbumDetail(state.deletedAlbumId);
+  else { state.deletedAlbumId = null; renderDeletedAlbumList(); }
+}
+
+function renderDeletedAlbumList() {
+  document.getElementById('deletedAlbumList').style.display = 'block';
+  document.getElementById('deletedGroups').style.display = 'none';
+  document.getElementById('deletedClientTitle').textContent = `${state.deletedClientName} ${CONTENT.deletedFiles.titleSuffix}`;
+
+  const wrap = document.getElementById('deletedAlbumList');
+  const entries = Object.entries(state.deletedGroups);
+
+  if (entries.length === 0) {
+    wrap.innerHTML = `<div class="meta-text">${CONTENT.deletedFiles.emptyNote || 'Nothing here yet.'}</div>`;
+    return;
+  }
+
+  wrap.innerHTML = entries.map(([albumId, group]) => `
+    <div class="album-row">
+      <div class="info" data-open-deleted-album="${albumId}">
+        <div class="name">${group.name}</div>
+        <div class="dates">${group.videos.length} ${pluralize(group.videos.length, 'item')}</div>
+      </div>
+      <div class="album-row-meta">
         ${group.albumDeleted ? `<button data-restore-album="${albumId}" class="btn-small">${CONTENT.deletedFiles.restoreCaptureButton}</button>` : ''}
       </div>
+    </div>
+  `).join('');
+
+  wrap.querySelectorAll('[data-open-deleted-album]').forEach(el => el.addEventListener('click', () => renderDeletedAlbumDetail(el.dataset.openDeletedAlbum)));
+  wrap.querySelectorAll('[data-restore-album]').forEach(btn => btn.addEventListener('click', async e => {
+    e.stopPropagation();
+    await api(`/albums/${btn.dataset.restoreAlbum}/restore`, { method: 'POST' });
+    refreshDeletedFiles();
+  }));
+}
+
+function renderDeletedAlbumDetail(albumId) {
+  const group = state.deletedGroups[albumId];
+  if (!group) { renderDeletedAlbumList(); return; }
+
+  state.deletedAlbumId = albumId;
+  state.deletedVideos = group.videos; // scoped to this album - what the preview modal navigates
+
+  document.getElementById('deletedAlbumList').style.display = 'none';
+  document.getElementById('deletedClientTitle').textContent = group.name;
+  const wrap = document.getElementById('deletedGroups');
+  wrap.style.display = 'block';
+
+  wrap.innerHTML = `
+    <div class="deleted-group">
+      ${group.albumDeleted ? `
+        <div class="deleted-group-header">
+          <div></div>
+          <button data-restore-album="${albumId}" class="btn-small">${CONTENT.deletedFiles.restoreCaptureButton}</button>
+        </div>` : ''}
       <div class="video-grid">
         ${group.videos.map(v => `
           <div class="video-card">
@@ -1367,7 +1425,7 @@ async function showDeletedFiles() {
         `).join('')}
       </div>
     </div>
-  `).join('');
+  `;
 
   wrap.querySelectorAll('.thumb[data-preview]').forEach(el => el.addEventListener('click', () => {
     const idx = state.deletedVideos.findIndex(v => v.id === el.dataset.preview);
@@ -1375,11 +1433,11 @@ async function showDeletedFiles() {
   }));
   wrap.querySelectorAll('[data-restore-album]').forEach(btn => btn.addEventListener('click', async () => {
     await api(`/albums/${btn.dataset.restoreAlbum}/restore`, { method: 'POST' });
-    showDeletedFiles();
+    refreshDeletedFiles();
   }));
   wrap.querySelectorAll('[data-restore-video]').forEach(btn => btn.addEventListener('click', async () => {
     await api(`/videos/${btn.dataset.restoreVideo}/restore`, { method: 'POST' });
-    showDeletedFiles();
+    refreshDeletedFiles();
   }));
   renderIcons(wrap);
 }
