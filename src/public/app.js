@@ -291,10 +291,12 @@ async function loadStorageUsage() {
     const pct = Math.min(100, (usedGb / STORAGE_FREE_LIMIT_GB) * 100);
     const isDanger = pct >= 90;
 
-    document.getElementById('storageUsageIndicator').style.display = 'block';
+    const indicator = document.getElementById('storageUsageIndicator');
+    indicator.style.display = 'block';
+    indicator.style.width = `${document.getElementById('deletedFilesBtn').offsetWidth}px`;
     document.getElementById('storageUsageBarFill').style.width = `${pct}%`;
     document.getElementById('storageUsageBarFill').classList.toggle('danger', isDanger);
-    document.getElementById('storageUsageText').textContent = `Using ${gb} GB of ${STORAGE_FREE_LIMIT_GB} GB storage`;
+    document.getElementById('storageUsageText').textContent = `${gb} GB / ${STORAGE_FREE_LIMIT_GB} GB`;
     document.getElementById('storageUsageWarning').style.display = isDanger ? 'block' : 'none';
   } catch {
     // Left hidden on failure - not worth a toast over a label nobody's waiting on.
