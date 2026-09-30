@@ -72,11 +72,15 @@ app.use('/api', (req, res, next) => {
   }
 
   const isAdmin = username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD;
+  // Separate admin-level login for Meta's app reviewers, so our own admin
+  // password never has to be shared/rotated for a review. Optional: only
+  // active once REVIEWER_USERNAME/REVIEWER_PASSWORD are set in Railway.
+  const isReviewer = !!process.env.REVIEWER_USERNAME && username === process.env.REVIEWER_USERNAME && password === process.env.REVIEWER_PASSWORD;
   const isTeam = username === process.env.TEAM_USERNAME && password === process.env.TEAM_PASSWORD;
 
-  if (!isAdmin && !isTeam) return res.status(401).json({ error: 'Not authenticated' });
+  if (!isAdmin && !isReviewer && !isTeam) return res.status(401).json({ error: 'Not authenticated' });
 
-  req.isAdmin = isAdmin; // routes use this to gate admin-only actions
+  req.isAdmin = isAdmin || isReviewer; // routes use this to gate admin-only actions
   next();
 });
 
