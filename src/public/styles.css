@@ -50,9 +50,16 @@ label { font-size: 12px; color: var(--text-secondary); display: block; margin: 1
 .btn-plain { background: var(--surface-1); color: var(--text-primary); display: inline-flex; align-items: center; gap: 6px; }
 #deletedFilesBtn .icon-trash svg { width: 12px; height: 12px; }
 .icon-green { color: var(--green); }
-.deleted-btn-row { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
-/* Width is set to match the Deleted Files button, in JS - the two sit at
+/* flex-end (not space-between) keeps the Deleted Files button pinned to
+   the right from the start - the storage bar is hidden until it's loaded,
+   and space-between would otherwise park a single remaining child at the
+   left, making the button visibly jump right once the bar appears. */
+.deleted-btn-row { display: flex; align-items: center; justify-content: flex-end; margin-top: 16px; }
+/* margin-right: auto claims the row's free space on the bar's side, so the
+   button still ends up pinned right without needing space-between. Width
+   is set to match the Deleted Files button, in JS - the two sit at
    opposite ends of the same row, so they read as a pair. */
+.storage-usage { margin-right: auto; }
 .storage-usage-bar { height: 6px; border-radius: 3px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
 .storage-usage-bar-fill { height: 100%; background: var(--green); border-radius: 3px; transition: width 0.3s ease; }
 .storage-usage-bar-fill.danger { background: var(--red); }
