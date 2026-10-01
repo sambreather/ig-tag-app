@@ -35,6 +35,9 @@ html.is-logged-in #screenApp { display: block; }
 .error-text { color: var(--red); font-size: 12px; margin-top: 8px; }
 
 input, select, button { font-family: inherit; font-size: 13px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--surface-1); color: var(--text-primary); }
+/* Extra room after the native dropdown arrow, which otherwise sits right
+   against the control's edge with the default 10px of padding. */
+#clientSelect { padding-right: 24px; }
 button { cursor: pointer; }
 button:hover { background: var(--surface-2); }
 button:disabled { color: var(--text-muted); cursor: default; }
