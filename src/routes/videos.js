@@ -29,11 +29,20 @@ router.post('/videos/:videoId/delete', async (req, res) => {
   const data = db.load();
   const video = data.videos.find(v => v.id === req.params.videoId);
   if (!video) return res.status(404).json({ error: 'Video not found' });
-  video.storageKey = await storage.softDelete(video.storageKey);
-  video.deleted = true;
-  video.deletedAt = new Date().toISOString();
-  db.save(data);
-  res.json(video);
+  const newKey = await storage.softDelete(video.storageKey);
+
+  // Re-load right before saving, and apply only this change on top of
+  // whatever is there now - same reasoning as the background jobs in
+  // capture.js (avoids clobbering something saved while we were busy
+  // talking to storage).
+  const fresh = db.load();
+  const freshVideo = fresh.videos.find(v => v.id === req.params.videoId);
+  if (!freshVideo) return res.status(404).json({ error: 'Video not found' });
+  freshVideo.storageKey = newKey;
+  freshVideo.deleted = true;
+  freshVideo.deletedAt = new Date().toISOString();
+  db.save(fresh);
+  res.json(freshVideo);
 });
 
 // Restore a soft-deleted video.
@@ -41,11 +50,17 @@ router.post('/videos/:videoId/restore', async (req, res) => {
   const data = db.load();
   const video = data.videos.find(v => v.id === req.params.videoId);
   if (!video) return res.status(404).json({ error: 'Video not found' });
-  video.storageKey = await storage.restore(video.storageKey);
-  video.deleted = false;
-  video.deletedAt = null;
-  db.save(data);
-  res.json(video);
+  const newKey = await storage.restore(video.storageKey);
+
+  // Re-load right before saving - same reasoning as above.
+  const fresh = db.load();
+  const freshVideo = fresh.videos.find(v => v.id === req.params.videoId);
+  if (!freshVideo) return res.status(404).json({ error: 'Video not found' });
+  freshVideo.storageKey = newKey;
+  freshVideo.deleted = false;
+  freshVideo.deletedAt = null;
+  db.save(fresh);
+  res.json(freshVideo);
 });
 
 // Get a direct, time-limited link for one video. Also used to stream the
