@@ -35,9 +35,20 @@ html.is-logged-in #screenApp { display: block; }
 .error-text { color: var(--red); font-size: 12px; margin-top: 8px; }
 
 input, select, button { font-family: inherit; font-size: 13px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--surface-1); color: var(--text-primary); }
-/* Extra room after the native dropdown arrow, which otherwise sits right
-   against the control's edge with the default 10px of padding. */
-#clientSelect { padding-right: 24px; }
+/* The native select arrow is pinned to a fixed strip near the edge in
+   most browsers - padding-right doesn't move it, it only pushes the text
+   further away from it. Drawn as a custom arrow instead (same stroke
+   style as the app's other chevron icons) so there's real room to its
+   right, positioned with real control over where it sits. */
+#clientSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='%23a8a6a1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 34px;
+}
 button { cursor: pointer; }
 button:hover { background: var(--surface-2); }
 button:disabled { color: var(--text-muted); cursor: default; }
