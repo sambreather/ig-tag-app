@@ -139,6 +139,9 @@ router.get('/clients/:clientId/deleted-videos', (req, res) => {
       ...v,
       albumName: album ? album.name : 'Deleted capture',
       albumDeleted: album ? album.deleted : true,
+      albumStatus: album ? album.status : null,
+      albumStart: album ? album.start : null,
+      albumEnd: album ? album.end : null,
       // Same idea as the main grid: a real preview picture instead of a
       // placeholder, via a temporary (1 hour) link, made fresh each time.
       previewUrl: storage.getSignedDownloadUrl(v.storageKey, 3600),

@@ -659,10 +659,8 @@ function renderAlbumList() {
   list.innerHTML = state.albums.map(a => {
     const isLive = a.status === 'capturing';
     const statusLabel = a.status === 'capturing' ? CONTENT.albumList.statusCapturing : a.status === 'scheduled' ? CONTENT.albumList.statusScheduled : CONTENT.albumList.statusDone;
-    const totalCount = (a.videoCount || 0) + (a.photoCount || 0);
-    const filesText = a.status === 'scheduled' ? '' :
-      `<span class="bold">${totalCount} ${pluralize(totalCount, 'file')}</span> <span class="muted">(${a.videoCount || 0} ${pluralize(a.videoCount || 0, 'video')}/${a.photoCount || 0} ${pluralize(a.photoCount || 0, 'photo')})</span>`;
-    const dates = a.status === 'capturing' ? `Started ${fmtShort(a.start)}` : `${fmtShort(a.start)} → ${fmtShort(a.end)}`;
+    const filesText = a.status === 'scheduled' ? '' : fileCountsHtml(a.videoCount, a.photoCount);
+    const dates = captureDatesText(a.status, a.start, a.end);
     return `
       <div class="album-row ${isLive ? 'live' : ''}">
         <div class="info" data-open="${a.id}">
@@ -702,6 +700,18 @@ function fmtShort(iso) {
 // "1 file" vs "2 files" - avoids the app reading "1 files"/"1 videos" etc.
 function pluralize(count, singular, plural) {
   return count === 1 ? singular : (plural || singular + 's');
+}
+
+// The two bits of capture info the main list and Deleted Files both show, in
+// one place so the two lists can't drift apart.
+function fileCountsHtml(videoCount, photoCount) {
+  const videos = videoCount || 0;
+  const photos = photoCount || 0;
+  const total = videos + photos;
+  return `<span class="bold">${total} ${pluralize(total, 'file')}</span> <span class="muted">(${videos} ${pluralize(videos, 'video')}/${photos} ${pluralize(photos, 'photo')})</span>`;
+}
+function captureDatesText(status, start, end) {
+  return status === 'capturing' ? `Started ${fmtShort(start)}` : `${fmtShort(start)} → ${fmtShort(end)}`;
 }
 
 async function deleteAlbum(albumId) {
@@ -1380,9 +1390,12 @@ async function refreshDeletedFiles() {
   const videos = await api(`/clients/${state.currentClientId}/deleted-videos`);
   const groups = {};
   videos.forEach(v => {
-    if (!groups[v.albumId]) groups[v.albumId] = { name: v.albumName, albumDeleted: v.albumDeleted, videos: [] };
+    if (!groups[v.albumId]) groups[v.albumId] = { name: v.albumName, albumDeleted: v.albumDeleted, status: v.albumStatus, start: v.albumStart, end: v.albumEnd, videos: [] };
     groups[v.albumId].videos.push(v);
   });
+  // Newest first, same as the main grid. The preview modal steps through
+  // this same order, so what you click through matches what you see.
+  Object.values(groups).forEach(g => g.videos.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
   state.deletedGroups = groups;
 
   if (state.deletedAlbumId && groups[state.deletedAlbumId]) renderDeletedAlbumDetail(state.deletedAlbumId);
@@ -1390,29 +1403,44 @@ async function refreshDeletedFiles() {
 }
 
 function renderDeletedAlbumList() {
-  document.getElementById('deletedAlbumList').style.display = 'block';
+  // '' (not 'block') so the .album-list class's flex layout and gap apply.
+  document.getElementById('deletedAlbumList').style.display = '';
   document.getElementById('deletedGroups').style.display = 'none';
   document.getElementById('deletedClientTitle').textContent = `${state.deletedClientName} ${CONTENT.deletedFiles.titleSuffix}`;
 
   const wrap = document.getElementById('deletedAlbumList');
-  const entries = Object.entries(state.deletedGroups);
+  // Most recently started capture first.
+  const entries = Object.entries(state.deletedGroups)
+    .sort(([, a], [, b]) => new Date(b.start || 0) - new Date(a.start || 0));
 
   if (entries.length === 0) {
     wrap.innerHTML = `<div class="meta-text">${CONTENT.deletedFiles.emptyNote || 'Nothing here yet.'}</div>`;
     return;
   }
 
-  wrap.innerHTML = entries.map(([albumId, group]) => `
-    <div class="album-row">
-      <div class="info" data-open-deleted-album="${albumId}">
-        <div class="name">${group.name}</div>
-        <div class="dates">${group.videos.length} ${pluralize(group.videos.length, 'item')}</div>
-      </div>
-      <div class="album-row-meta">
-        ${group.albumDeleted ? `<button data-restore-album="${albumId}" class="btn-small">${CONTENT.deletedFiles.restoreCaptureButton}</button>` : ''}
-      </div>
-    </div>
-  `).join('');
+  const restoreLabel = CONTENT.deletedFiles.restoreCaptureButton;
+  wrap.innerHTML = entries.map(([albumId, group]) => {
+    const videoCount = group.videos.filter(v => v.type === 'video').length;
+    const photoCount = group.videos.filter(v => v.type === 'photo').length;
+    const dates = group.start ? captureDatesText(group.status, group.start, group.end) : '';
+    // Only a wholly-deleted capture can be restored as a capture. The other
+    // rows get an invisible copy of the same button instead, so the file
+    // counts line up in every row whatever the button's wording is.
+    const restoreBtn = group.albumDeleted
+      ? `<button data-restore-album="${albumId}" class="btn-small">${restoreLabel}</button>`
+      : `<button class="btn-small" style="visibility:hidden" tabindex="-1" aria-hidden="true">${restoreLabel}</button>`;
+    return `
+      <div class="album-row">
+        <div class="info" data-open-deleted-album="${albumId}">
+          <div class="name">${group.name}</div>
+          <div class="dates">${dates}</div>
+        </div>
+        <div class="album-row-meta">
+          <div class="files">${fileCountsHtml(videoCount, photoCount)}</div>
+          <div class="album-row-status-actions">${restoreBtn}</div>
+        </div>
+      </div>`;
+  }).join('');
 
   wrap.querySelectorAll('[data-open-deleted-album]').forEach(el => el.addEventListener('click', () => renderDeletedAlbumDetail(el.dataset.openDeletedAlbum)));
   wrap.querySelectorAll('[data-restore-album]').forEach(btn => btn.addEventListener('click', async e => {

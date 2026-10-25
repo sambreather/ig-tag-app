@@ -126,7 +126,7 @@ const CONTENT = {
     titleSuffix: '\u2014 deleted files',
     retentionNote: 'Kept for 30 days, then permanently removed.',
     restoreButton: 'Restore',
-    restoreCaptureButton: 'Restore capture',
+    restoreCaptureButton: 'Restore Capture',
     emptyNote: 'Nothing here yet.',
   },
 
