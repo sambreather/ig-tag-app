@@ -59,6 +59,21 @@ router.post('/videos/:videoId/restore', async (req, res) => {
   freshVideo.storageKey = newKey;
   freshVideo.deleted = false;
   freshVideo.deletedAt = null;
+
+  // A live clip can't sit inside a deleted capture - it would show up
+  // nowhere. So restoring one clip from a deleted capture brings the
+  // capture back too, holding just that clip. The others stay deleted, but
+  // as individually-deleted clips (Deleted Files lists them under the
+  // capture's name, each with its own Restore) rather than as part of a
+  // deleted capture - otherwise restoring or re-deleting the capture later
+  // would sweep them back in.
+  const album = fresh.albums.find(a => a.id === freshVideo.albumId);
+  if (album && album.deleted) {
+    album.deleted = false;
+    album.deletedAt = null;
+    fresh.videos.forEach(v => { if (v.albumId === album.id && v.deletedWithAlbum) v.deletedWithAlbum = false; });
+  }
+
   db.save(fresh);
   res.json(freshVideo);
 });

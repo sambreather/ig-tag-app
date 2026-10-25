@@ -1373,7 +1373,8 @@ document.addEventListener('keydown', e => {
 document.getElementById('deletedFilesBtn').addEventListener('click', showDeletedFiles);
 document.getElementById('backFromDeletedBtn').addEventListener('click', () => {
   if (state.deletedAlbumId) { state.deletedAlbumId = null; renderDeletedAlbumList(); }
-  else showScreen('albumsView');
+  // Reload (not just show) the main list - restores made in here change it.
+  else showAlbums(state.currentClientId);
 });
 
 async function showDeletedFiles() {
