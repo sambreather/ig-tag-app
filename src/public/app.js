@@ -1314,7 +1314,13 @@ document.getElementById('previewRestoreBtn').addEventListener('click', async () 
   closePreview();
   refreshDeletedFiles();
 });
-function closePreview() { document.getElementById('previewModal').style.display = 'none'; state.modalOpen = false; }
+// Hiding the modal doesn't stop the <video> inside it - without the pause,
+// a clip that was playing carries on (audio and all) behind the closed modal.
+function closePreview() {
+  document.getElementById('previewVideoEl').pause();
+  document.getElementById('previewModal').style.display = 'none';
+  state.modalOpen = false;
+}
 document.getElementById('closePreview').addEventListener('click', closePreview);
 document.getElementById('previewModal').addEventListener('click', e => { if (e.target.id === 'previewModal') closePreview(); });
 document.getElementById('previewCard').addEventListener('click', e => e.stopPropagation());
