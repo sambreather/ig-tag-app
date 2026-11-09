@@ -57,7 +57,12 @@ function load() {
 }
 
 function save(data) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+  // Written to a temporary file first, then renamed over the real one. A
+  // rename is all-or-nothing, so a restart or crash partway through a save
+  // can't leave data.json half-written - which would stop the app starting.
+  const tmpPath = DB_PATH + '.tmp';
+  fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2));
+  fs.renameSync(tmpPath, DB_PATH);
 }
 
 module.exports = { load, save };

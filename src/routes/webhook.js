@@ -105,7 +105,44 @@ function detectMediaType(buffer, headerType, url) {
   return video();
 }
 
-async function handleStoryMention({ igUserId, mediaUrl, senderId, messageId, timestamp }) {
+// Each Story is held in memory in full while it downloads and uploads, so a
+// burst of simultaneous mentions can use a lot of memory at once (about one
+// file's worth each). Only a few run at a time and the rest wait their turn -
+// they've already been acknowledged to Meta, so waiting costs nothing.
+const MAX_CONCURRENT_CAPTURES = 4;
+let activeCaptures = 0;
+const waitingCaptures = [];
+async function limited(fn) {
+  if (activeCaptures >= MAX_CONCURRENT_CAPTURES) await new Promise(resolve => waitingCaptures.push(resolve)); // our slot is handed over, already counted
+  else activeCaptures++;
+  try {
+    return await fn();
+  } finally {
+    const next = waitingCaptures.shift();
+    if (next) next(); // pass the slot straight on
+    else activeCaptures--;
+  }
+}
+
+// Meta can deliver the same mention more than once. The "already stored?"
+// check in processStoryMention only sees mentions that have finished, so a
+// second copy arriving mid-download would sail through and be saved twice.
+// This tracks the ones still in progress (including those waiting their turn).
+const inProgressMessageIds = new Set();
+async function handleStoryMention(mention) {
+  const { messageId } = mention;
+  if (messageId) {
+    if (inProgressMessageIds.has(messageId)) return;
+    inProgressMessageIds.add(messageId);
+  }
+  try {
+    await limited(() => processStoryMention(mention));
+  } finally {
+    if (messageId) inProgressMessageIds.delete(messageId);
+  }
+}
+
+async function processStoryMention({ igUserId, mediaUrl, senderId, messageId, timestamp }) {
   if (!mediaUrl) return;
 
   const data = db.load();
