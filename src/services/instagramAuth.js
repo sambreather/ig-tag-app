@@ -8,10 +8,12 @@
 // token day to day (downloading media, looking up a username) - this file
 // is only about getting and renewing that token in the first place.
 //
-// The Instagram app ID/secret shown on the "API setup with Instagram
-// login" dashboard page turned out to be the same as this app's main
-// META_APP_ID/META_APP_SECRET (confirmed by comparing them directly), so
-// those are reused here rather than needing separate env vars.
+// META_APP_ID/META_APP_SECRET must be the Instagram app ID/secret shown on
+// the "API setup with Instagram login" dashboard page. They started out the
+// same as the main app ID/secret under App settings > Basic, but they can
+// drift apart (they did after the Oct 2026 secret rotation). A wrong secret
+// makes the code exchange fail ("Error validating verification code") and
+// every webhook fail its signature check, silently.
 //
 // The code/token-exchange and refresh requests below are checked directly
 // against Meta's current Instagram Platform docs (Sept 2026). The
@@ -95,14 +97,27 @@ async function subscribeToMessages(accessToken) {
  * assumed to still hold if this ever needs revisiting.
  */
 async function fetchProfile(igUserId, accessToken) {
-  try {
-    const res = await axios.get(`https://graph.instagram.com/${igUserId}`, {
-      params: { fields: 'username,user_id', access_token: accessToken },
-    });
-    return { username: res.data?.username || null, webhookUserId: res.data?.user_id ? String(res.data.user_id) : null };
-  } catch {
-    return { username: null, webhookUserId: null };
+  // /me ("whose token is this?") is Meta's documented way to get user_id, and
+  // doesn't depend on the code-exchange ID working as a path. The old
+  // /{code-exchange id} lookup is kept as a fallback. Failures used to be
+  // swallowed with no trace, which hid why one account's lookup failed and
+  // left it saved under the wrong ID; they're logged now (the response body
+  // only - never the request, which carries the token).
+  let username = null;
+  for (const target of ['me', igUserId]) {
+    const label = target === 'me' ? '/me' : '/{code-exchange id}';
+    try {
+      const res = await axios.get(`https://graph.instagram.com/${target}`, {
+        params: { fields: 'username,user_id', access_token: accessToken },
+      });
+      username = username || res.data?.username || null;
+      if (res.data?.user_id) return { username, webhookUserId: String(res.data.user_id) };
+      console.error(`fetchProfile ${label}: response had no user_id:`, JSON.stringify(res.data));
+    } catch (err) {
+      console.error(`fetchProfile ${label} failed:`, JSON.stringify(err.response?.data || err.message));
+    }
   }
+  return { username, webhookUserId: null };
 }
 
 /**
