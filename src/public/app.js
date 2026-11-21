@@ -259,13 +259,17 @@ async function startApp() {
     el.style.display = state.isAdmin ? '' : 'none';
   });
 
-  state.clients = await api('/clients');
+  state.clients = (await api('/clients')).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   const sel = document.getElementById('clientSelect');
   sel.innerHTML = state.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
   sel.onchange = () => showAlbums(sel.value);
 
   if (state.clients.length) {
-    showAlbums(state.clients[0].id);
+    // Reopen on whichever artist was being viewed before a refresh, if they
+    // still exist; otherwise the first in the list.
+    let savedId = null;
+    try { savedId = localStorage.getItem('lastClientId'); } catch {}
+    showAlbums(state.clients.some(c => c.id === savedId) ? savedId : state.clients[0].id);
   } else if (state.isAdmin) {
     // Only an admin can actually add clients, so show the add-client screen.
     // Nothing to go back to yet, so no back button.
@@ -648,6 +652,7 @@ function showScreen(id) {
 // --- Albums list ---
 async function showAlbums(clientId) {
   state.currentClientId = clientId;
+  try { localStorage.setItem('lastClientId', clientId); } catch {}
   document.getElementById('clientSelect').value = clientId;
   showScreen('albumsView');
   state.albums = await api(`/clients/${clientId}/albums`);
