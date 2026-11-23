@@ -1081,13 +1081,48 @@ document.getElementById('downloadStarredBtn').addEventListener('click', () => {
 });
 document.getElementById('deleteMarkedBtn').addEventListener('click', () => {
   const marked = state.videos.filter(v => v.mark === 'delete');
-  showConfirm(fill(CONTENT.videos.deleteMarkedConfirm, { count: marked.length }), async () => {
-    for (const v of marked) await api(`/videos/${v.id}/delete`, { method: 'POST' });
+  showConfirm(fill(CONTENT.videos.deleteMarkedConfirm, { count: marked.length }), () => {
+    // Each delete means moving a file within storage, about a second apiece, so
+    // waiting for all of them left the grid frozen for ages. The items leave
+    // the grid straight away and the real work carries on in the background.
+    const albumId = state.currentAlbumId;
     state.videos = state.videos.filter(v => v.mark !== 'delete');
     renderGrid();
     showToast(fill(CONTENT.videos.deleteMultipleToast, { count: marked.length }), null);
+    deleteInBackground(marked, albumId);
   });
 });
+
+// Refreshing or closing the page mid-way would abandon whatever hasn't been
+// sent yet, so the browser is asked to confirm while any are outstanding.
+let pendingDeletes = 0;
+window.addEventListener('beforeunload', e => {
+  if (pendingDeletes > 0) { e.preventDefault(); e.returnValue = ''; }
+});
+
+async function deleteInBackground(videos, albumId) {
+  pendingDeletes += videos.length;
+  const queue = videos.slice();
+  const failed = [];
+  // A few at a time rather than one by one - quicker, without flooding storage.
+  const worker = async () => {
+    while (queue.length) {
+      const v = queue.shift();
+      try { await api(`/videos/${v.id}/delete`, { method: 'POST' }); } catch { failed.push(v); }
+      pendingDeletes--;
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  if (!failed.length) return;
+  showAlert(`${failed.length} of ${videos.length} files couldn't be deleted and have been put back. Please try again.`);
+  if (state.currentAlbumId === albumId) {
+    try {
+      state.videos = await api(`/albums/${albumId}/videos`);
+      sortVideos(document.getElementById('sortSelect').value);
+      renderGrid();
+    } catch {}
+  }
+}
 
 // --- Unified preview / review modal ---
 function openPreview(idx) {

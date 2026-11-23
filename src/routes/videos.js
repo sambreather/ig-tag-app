@@ -29,7 +29,14 @@ router.post('/videos/:videoId/delete', async (req, res) => {
   const data = db.load();
   const video = data.videos.find(v => v.id === req.params.videoId);
   if (!video) return res.status(404).json({ error: 'Video not found' });
-  const newKey = await storage.softDelete(video.storageKey);
+  let newKey;
+  try {
+    newKey = await storage.softDelete(video.storageKey);
+  } catch (err) {
+    // Without this the request never gets a reply and the page waits forever.
+    console.error('Soft-delete failed for', video.id, err.message);
+    return res.status(500).json({ error: 'Storage error' });
+  }
 
   // Re-load right before saving, and apply only this change on top of
   // whatever is there now - same reasoning as the background jobs in
@@ -50,7 +57,13 @@ router.post('/videos/:videoId/restore', async (req, res) => {
   const data = db.load();
   const video = data.videos.find(v => v.id === req.params.videoId);
   if (!video) return res.status(404).json({ error: 'Video not found' });
-  const newKey = await storage.restore(video.storageKey);
+  let newKey;
+  try {
+    newKey = await storage.restore(video.storageKey);
+  } catch (err) {
+    console.error('Restore failed for', video.id, err.message);
+    return res.status(500).json({ error: 'Storage error' });
+  }
 
   // Re-load right before saving - same reasoning as above.
   const fresh = db.load();
